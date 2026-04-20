@@ -60,6 +60,9 @@
     "directories": {
       "output": "dist"
     },
+    "asarUnpack": [
+      "node_modules/speedtest-net/**/*"
+    ],
     "linux": {
       "target": [
         "AppImage",

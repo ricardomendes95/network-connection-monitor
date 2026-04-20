@@ -22,5 +22,13 @@ console.error("Suggested commands on Windows:");
 console.error("  npm ci");
 console.error("  npm run dist:win");
 console.error("");
+console.error(
+  "If you prefer pnpm on Windows, reinstall dependencies there first:",
+);
+console.error("  pnpm install");
+console.error("  pnpm approve-builds");
+console.error("  pnpm rebuild electron better-sqlite3");
+console.error("  pnpm run dist:win");
+console.error("");
 
 process.exit(1);

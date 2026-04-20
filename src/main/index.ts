@@ -1,5 +1,4 @@
 import { app, shell, BrowserWindow, dialog } from "electron";
-import { appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import { runMigrations } from "./database/migrations";
@@ -8,21 +7,9 @@ import { SchedulerService } from "./services/scheduler.service";
 import { registerHandlers } from "./ipc/handlers";
 import { getNetworkInfo } from "./services/network-info.service";
 import { IPC_CHANNELS } from "./ipc/channels";
+import { writeMainLog } from "./utils/logger";
 
 let scheduler: SchedulerService | null = null;
-
-function writeMainLog(message: string, details?: unknown): void {
-  const suffix = details === undefined ? "" : ` ${JSON.stringify(details)}`;
-  const line = `[${new Date().toISOString()}] ${message}${suffix}\n`;
-
-  try {
-    const logDir = app.isReady() ? app.getPath("userData") : process.cwd();
-    mkdirSync(logDir, { recursive: true });
-    appendFileSync(join(logDir, "main.log"), line, "utf8");
-  } catch {}
-
-  console.log(message, details ?? "");
-}
 
 function showFatalError(title: string, error: unknown): void {
   const message =
