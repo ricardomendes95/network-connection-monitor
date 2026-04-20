@@ -9,8 +9,8 @@
     "dist": "npm run build && electron-builder",
     "predist:win": "node scripts/assert-win-build-host.cjs",
     "dist:win": "npm run build && electron-builder --win",
-    "rebuild": "electron-rebuild -f -w better-sqlite3",
-    "postinstall": "electron-rebuild -f -w better-sqlite3",
+    "rebuild": "electron-rebuild -f -w better-sqlite3,lzma-native",
+    "postinstall": "electron-rebuild -f -w better-sqlite3,lzma-native",
     "rebuild:sqlite": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
@@ -53,6 +53,9 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.5.4",
     "vite": "^5.4.8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "electron"]
   },
   "build": {
     "appId": "com.ricardo.network-connection",

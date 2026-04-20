@@ -19,6 +19,10 @@ function isWSL(): boolean {
   }
 }
 
+function isWindows(): boolean {
+  return process.platform === 'win32'
+}
+
 function runCmd(cmd: string, timeoutMs = 4000): string {
   try {
     return execSync(cmd, {
@@ -36,9 +40,10 @@ interface WifiInfo {
   connected: boolean
 }
 
-// WSL: consulta netsh.exe do Windows para obter info do WiFi
-function getWslWifiInfo(): WifiInfo {
-  const out = runCmd('netsh.exe wlan show interfaces', 5000)
+// Windows nativo ou WSL: consulta netsh para obter info do WiFi
+function getWindowsWifiInfo(wsl = false): WifiInfo {
+  const cmd = wsl ? 'netsh.exe wlan show interfaces' : 'netsh wlan show interfaces'
+  const out = runCmd(cmd, 5000)
   if (!out) return { ssid: null, connected: false }
 
   let ssid: string | null = null
@@ -63,10 +68,11 @@ function getWslWifiInfo(): WifiInfo {
   return { ssid, connected }
 }
 
-// WSL: obtém nome do perfil de rede Ethernet ativa via PowerShell
-function getWslEthernetProfileName(): string {
+// Windows nativo ou WSL: obtém nome do perfil de rede Ethernet ativa via PowerShell
+function getWindowsEthernetProfileName(wsl = false): string {
+  const ps = wsl ? 'powershell.exe' : 'powershell'
   const out = runCmd(
-    'powershell.exe -NoProfile -Command "(Get-NetConnectionProfile | Where-Object {$_.IPv4Connectivity -ne \'NoTraffic\'} | Select-Object -First 1).Name"',
+    `${ps} -NoProfile -Command "(Get-NetConnectionProfile | Where-Object {$_.IPv4Connectivity -ne 'NoTraffic'} | Select-Object -First 1).Name"`,
     6000
   )
   return out.replace(/\r/g, '') || 'Ethernet'
@@ -138,15 +144,15 @@ export async function getNetworkInfo(): Promise<NetworkInfo> {
   let networkName = 'Desconhecido'
   let connectionType: 'wifi' | 'wired' = 'wired'
 
-  if (wsl) {
-    // Em WSL, consulta o Windows diretamente
-    const wifi = getWslWifiInfo()
+  if (wsl || isWindows()) {
+    // WSL ou Windows nativo: consulta via netsh/PowerShell
+    const wifi = getWindowsWifiInfo(wsl)
     if (wifi.connected && wifi.ssid) {
       connectionType = 'wifi'
       networkName = wifi.ssid
     } else {
       connectionType = 'wired'
-      networkName = getWslEthernetProfileName()
+      networkName = getWindowsEthernetProfileName(wsl)
     }
   } else {
     // Linux nativo
