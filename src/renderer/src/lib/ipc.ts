@@ -22,6 +22,8 @@ declare global {
       onSchedulerTick: (cb: (data: { nextInSeconds: number }) => void) => void
       onNetworkInfoUpdate: (cb: (info: LiveNetworkInfo) => void) => void
       removeAllListeners: (channel: string) => void
+      getAutostart: () => Promise<boolean>
+      setAutostart: (enable: boolean) => Promise<{ ok: boolean }>
     }
   }
 }
@@ -51,5 +53,8 @@ export const ipc = {
   onNetworkInfoUpdate: (cb: (info: LiveNetworkInfo) => void) =>
     window.electronAPI.onNetworkInfoUpdate(cb),
 
-  removeAllListeners: (channel: string) => window.electronAPI.removeAllListeners(channel)
+  removeAllListeners: (channel: string) => window.electronAPI.removeAllListeners(channel),
+
+  getAutostart: () => window.electronAPI.getAutostart(),
+  setAutostart: (enable: boolean) => window.electronAPI.setAutostart(enable)
 }

@@ -6,6 +6,7 @@ import { Switch } from '../components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
 import { useSettings } from '../hooks/useSettings'
 import { Check, Info, Wifi, Cable } from 'lucide-react'
+import { ipc } from '../lib/ipc'
 
 const INTERVAL_OPTIONS = [
   { value: '5', label: 'A cada 5 min', note: 'Muito frequente, usa mais banda' },
@@ -46,6 +47,7 @@ export function SettingsPage(): JSX.Element {
   const [contracted, setContracted] = useState(settings.contracted_speed_mbps ?? '100')
   const [connType, setConnType] = useState(settings.connection_type ?? 'auto')
   const [ispName, setIspName] = useState(settings.isp_name ?? '')
+  const [autostart, setAutostart] = useState(false)
 
   useEffect(() => {
     setInterval(settings.interval_minutes)
@@ -56,15 +58,22 @@ export function SettingsPage(): JSX.Element {
     setIspName(settings.isp_name ?? '')
   }, [settings])
 
+  useEffect(() => {
+    ipc.getAutostart().then(setAutostart).catch(() => {})
+  }, [])
+
   const handleSave = async (): Promise<void> => {
-    await saveSettings({
-      interval_minutes: interval,
-      slow_threshold_mbps: threshold,
-      notifications_enabled: String(notifs),
-      contracted_speed_mbps: contracted,
-      connection_type: connType,
-      isp_name: ispName
-    })
+    await Promise.all([
+      saveSettings({
+        interval_minutes: interval,
+        slow_threshold_mbps: threshold,
+        notifications_enabled: String(notifs),
+        contracted_speed_mbps: contracted,
+        connection_type: connType,
+        isp_name: ispName
+      }),
+      ipc.setAutostart(autostart)
+    ])
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
@@ -218,6 +227,16 @@ export function SettingsPage(): JSX.Element {
               </p>
             </div>
             <Switch checked={notifs} onCheckedChange={setNotifs} />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Iniciar com o Windows</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Abrir o monitor automaticamente ao ligar o computador
+              </p>
+            </div>
+            <Switch checked={autostart} onCheckedChange={setAutostart} />
           </div>
         </CardContent>
       </Card>

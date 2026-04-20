@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron'
+import { ipcMain, dialog, BrowserWindow, app } from 'electron'
 import fs from 'fs'
 import { getDb } from '../database/connection'
 import { IPC_CHANNELS } from './channels'
@@ -220,5 +220,14 @@ export function registerHandlers(scheduler: SchedulerService): void {
       return { ok: true }
     }
     return { ok: false }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.AUTOSTART_GET, () => {
+    return app.getLoginItemSettings().openAtLogin
+  })
+
+  ipcMain.handle(IPC_CHANNELS.AUTOSTART_SET, (_event, enable: boolean) => {
+    app.setLoginItemSettings({ openAtLogin: enable })
+    return { ok: true }
   })
 }

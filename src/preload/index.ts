@@ -44,5 +44,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   removeAllListeners: (channel: string) => {
     ipcRenderer.removeAllListeners(channel)
-  }
+  },
+
+  getAutostart: () => ipcRenderer.invoke(IPC_CHANNELS.AUTOSTART_GET),
+  setAutostart: (enable: boolean) => ipcRenderer.invoke(IPC_CHANNELS.AUTOSTART_SET, enable)
 })

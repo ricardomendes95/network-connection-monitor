@@ -1,6 +1,7 @@
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import { Sidebar } from './components/layout/Sidebar'
 import { Header } from './components/layout/Header'
+import { TestingToast } from './components/layout/TestingToast'
 import { Dashboard } from './pages/Dashboard'
 import { Charts } from './pages/Charts'
 import { HistoryPage } from './pages/History'
@@ -15,6 +16,7 @@ function Layout(): JSX.Element {
       <Sidebar />
       <div className="flex flex-col flex-1 min-w-0 print:block">
         <Header />
+        <TestingToast />
         <main className="flex-1 overflow-auto p-6 print:overflow-visible print:h-auto print:flex-none">
           <Routes>
             <Route path="/" element={<Dashboard />} />

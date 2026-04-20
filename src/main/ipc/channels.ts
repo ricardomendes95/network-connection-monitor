@@ -16,5 +16,8 @@ export const IPC_CHANNELS = {
   SCHEDULER_TICK: 'speed:scheduler-tick',
 
   EXPORT_PDF: 'export:pdf',
-  SAVE_PNG: 'export:save-png'
+  SAVE_PNG: 'export:save-png',
+
+  AUTOSTART_GET: 'app:autostart-get',
+  AUTOSTART_SET: 'app:autostart-set'
 } as const
