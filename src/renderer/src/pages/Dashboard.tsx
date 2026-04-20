@@ -2,6 +2,7 @@ import { PlayCircle, Loader2 } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { AlertBanner } from '../components/dashboard/AlertBanner'
+import { TestErrorBanner } from '../components/dashboard/TestErrorBanner'
 import { CurrentStatus } from '../components/dashboard/CurrentStatus'
 import { SpeedGauge } from '../components/dashboard/SpeedGauge'
 import { NetworkEvaluation } from '../components/dashboard/NetworkEvaluation'
@@ -39,6 +40,7 @@ export function Dashboard(): JSX.Element {
       </div>
 
       <AlertBanner />
+      <TestErrorBanner />
 
       <CurrentStatus />
 

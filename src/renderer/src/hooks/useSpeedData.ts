@@ -12,7 +12,7 @@ const CHANNELS = [
 ]
 
 export function useSpeedData(): void {
-  const { addResult, setIsTesting, setIsAlert, setNextTestIn, setResults, setLiveNetwork, setSettings } =
+  const { addResult, setIsTesting, setIsAlert, setTestError, setNextTestIn, setResults, setLiveNetwork, setSettings } =
     useSpeedStore()
 
   useEffect(() => {
@@ -26,11 +26,11 @@ export function useSpeedData(): void {
     ipc.getCurrentNetworkInfo().then(setLiveNetwork).catch(() => {})
 
     // Eventos de teste
-    ipc.onTestStarted(() => setIsTesting(true))
+    ipc.onTestStarted(() => { setIsTesting(true); setTestError(null) })
     ipc.onTestCompleted((result) => {
       setIsTesting(false)
+      setTestError(null)
       addResult(result)
-      // Atualiza info de rede com os dados mais recentes do teste
       if (result.connection_type && result.network_name) {
         setLiveNetwork({
           connectionType: result.connection_type as 'wifi' | 'wired',
@@ -39,7 +39,7 @@ export function useSpeedData(): void {
         })
       }
     })
-    ipc.onTestFailed(() => setIsTesting(false))
+    ipc.onTestFailed((data) => { setIsTesting(false); setTestError(data.error) })
     ipc.onSpeedAlert(() => setIsAlert(true))
     ipc.onSchedulerTick((data) => setNextTestIn(data.nextInSeconds))
 

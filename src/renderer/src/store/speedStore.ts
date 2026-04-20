@@ -6,6 +6,7 @@ interface SpeedStore {
   lastResult: SpeedResult | null
   isTesting: boolean
   isAlert: boolean
+  testError: string | null
   nextTestIn: number
   settings: Settings
   liveNetwork: LiveNetworkInfo | null
@@ -13,6 +14,7 @@ interface SpeedStore {
   addResult: (result: SpeedResult) => void
   setIsTesting: (v: boolean) => void
   setIsAlert: (v: boolean) => void
+  setTestError: (error: string | null) => void
   setNextTestIn: (seconds: number) => void
   setSettings: (s: Settings) => void
   setResults: (results: SpeedResult[]) => void
@@ -24,6 +26,7 @@ export const useSpeedStore = create<SpeedStore>((set) => ({
   lastResult: null,
   isTesting: false,
   isAlert: false,
+  testError: null,
   nextTestIn: 0,
   liveNetwork: null,
   settings: {
@@ -44,6 +47,7 @@ export const useSpeedStore = create<SpeedStore>((set) => ({
 
   setIsTesting: (v) => set({ isTesting: v }),
   setIsAlert: (v) => set({ isAlert: v }),
+  setTestError: (error) => set({ testError: error }),
   setNextTestIn: (seconds) => set({ nextTestIn: seconds }),
   setSettings: (s) => set({ settings: s }),
   setResults: (results) => set({ results, lastResult: results[0] ?? null }),
