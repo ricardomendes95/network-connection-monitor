@@ -1,4 +1,5 @@
 import { app, shell, BrowserWindow, dialog } from "electron";
+import { createOverlayWindow } from "./services/overlay-toast.service";
 import { join } from "node:path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import { runMigrations } from "./database/migrations";
@@ -134,6 +135,7 @@ app
     writeMainLog("IPC handlers registered");
 
     createWindow();
+    createOverlayWindow(join(__dirname, "../preload/index.js"));
 
     // Detecta rede ao vivo e envia para o renderer antes do primeiro teste
     setTimeout(async () => {

@@ -1,11 +1,11 @@
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import { Sidebar } from './components/layout/Sidebar'
 import { Header } from './components/layout/Header'
-import { TestingToast } from './components/layout/TestingToast'
 import { Dashboard } from './pages/Dashboard'
 import { Charts } from './pages/Charts'
 import { HistoryPage } from './pages/History'
 import { SettingsPage } from './pages/Settings'
+import { OverlayPage } from './pages/Overlay'
 import { useSpeedData } from './hooks/useSpeedData'
 
 function Layout(): JSX.Element {
@@ -16,7 +16,6 @@ function Layout(): JSX.Element {
       <Sidebar />
       <div className="flex flex-col flex-1 min-w-0 print:block">
         <Header />
-        <TestingToast />
         <main className="flex-1 overflow-auto p-6 print:overflow-visible print:h-auto print:flex-none">
           <Routes>
             <Route path="/" element={<Dashboard />} />
@@ -33,7 +32,10 @@ function Layout(): JSX.Element {
 export default function App(): JSX.Element {
   return (
     <HashRouter>
-      <Layout />
+      <Routes>
+        <Route path="/overlay" element={<OverlayPage />} />
+        <Route path="/*" element={<Layout />} />
+      </Routes>
     </HashRouter>
   )
 }

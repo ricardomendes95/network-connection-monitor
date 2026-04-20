@@ -5,6 +5,7 @@ import { showSlowNetworkNotification } from "./notification.service";
 import { getNetworkInfo } from "./network-info.service";
 import { IPC_CHANNELS } from "../ipc/channels";
 import { writeMainLog } from "../utils/logger";
+import { showOverlayWindow, hideOverlayWindowAfter } from "./overlay-toast.service";
 
 export class SchedulerService {
   private timer: NodeJS.Timeout | null = null;
@@ -75,6 +76,7 @@ export class SchedulerService {
   private async executeTest(): Promise<void> {
     if (this.isRunning) return;
     this.isRunning = true;
+    showOverlayWindow();
     this.broadcast(IPC_CHANNELS.TEST_STARTED, null);
 
     try {
@@ -125,6 +127,7 @@ export class SchedulerService {
         .get();
 
       this.broadcast(IPC_CHANNELS.TEST_COMPLETED, saved);
+      hideOverlayWindowAfter(3000);
 
       if (isSlow) {
         this.broadcast(IPC_CHANNELS.SPEED_ALERT, { download: result.download });
@@ -137,6 +140,7 @@ export class SchedulerService {
         stack: err instanceof Error ? err.stack : undefined,
       });
       this.broadcast(IPC_CHANNELS.TEST_FAILED, { error: message });
+      hideOverlayWindowAfter(4000);
     } finally {
       this.isRunning = false;
     }
