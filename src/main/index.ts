@@ -1,0 +1,176 @@
+import { app, shell, BrowserWindow, dialog } from "electron";
+import { appendFileSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { electronApp, optimizer, is } from "@electron-toolkit/utils";
+import { runMigrations } from "./database/migrations";
+import { closeDb, getDb } from "./database/connection";
+import { SchedulerService } from "./services/scheduler.service";
+import { registerHandlers } from "./ipc/handlers";
+import { getNetworkInfo } from "./services/network-info.service";
+import { IPC_CHANNELS } from "./ipc/channels";
+
+let scheduler: SchedulerService | null = null;
+
+function writeMainLog(message: string, details?: unknown): void {
+  const suffix = details === undefined ? "" : ` ${JSON.stringify(details)}`;
+  const line = `[${new Date().toISOString()}] ${message}${suffix}\n`;
+
+  try {
+    const logDir = app.isReady() ? app.getPath("userData") : process.cwd();
+    mkdirSync(logDir, { recursive: true });
+    appendFileSync(join(logDir, "main.log"), line, "utf8");
+  } catch {}
+
+  console.log(message, details ?? "");
+}
+
+function showFatalError(title: string, error: unknown): void {
+  const message =
+    error instanceof Error
+      ? `${error.message}\n\n${error.stack ?? ""}`
+      : String(error);
+  writeMainLog(title, { message });
+
+  try {
+    dialog.showErrorBox(title, message);
+  } catch {}
+}
+
+process.on("uncaughtException", (error) => {
+  showFatalError("Erro no processo principal", error);
+});
+
+process.on("unhandledRejection", (reason) => {
+  showFatalError("Promise rejeitada no processo principal", reason);
+});
+
+function createWindow(): BrowserWindow {
+  const mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 750,
+    minWidth: 900,
+    minHeight: 600,
+    show: true,
+    title: "Network Monitor",
+    autoHideMenuBar: true,
+    backgroundColor: "#101418",
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.js"),
+      sandbox: false,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  let didShowWindow = false;
+  const revealWindow = () => {
+    if (didShowWindow || mainWindow.isDestroyed()) return;
+    didShowWindow = true;
+    writeMainLog("Revealing main window");
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  };
+
+  mainWindow.once("ready-to-show", revealWindow);
+  mainWindow.webContents.once("did-finish-load", revealWindow);
+  mainWindow.on("show", () => writeMainLog("Main window shown"));
+  mainWindow.on("closed", () => writeMainLog("Main window closed"));
+  mainWindow.webContents.on(
+    "did-fail-load",
+    (_event, errorCode, errorDescription, validatedURL) => {
+      writeMainLog("Renderer failed to load", {
+        errorCode,
+        errorDescription,
+        validatedURL,
+      });
+      revealWindow();
+    },
+  );
+  mainWindow.webContents.on("render-process-gone", (_event, details) => {
+    writeMainLog("Renderer process gone", details);
+    revealWindow();
+  });
+  setTimeout(revealWindow, 3000);
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: "deny" };
+  });
+
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    writeMainLog("Loading renderer URL", {
+      url: process.env["ELECTRON_RENDERER_URL"],
+    });
+    mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"]);
+  } else {
+    writeMainLog("Loading renderer file", {
+      file: join(__dirname, "../renderer/index.html"),
+    });
+    mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
+  }
+
+  return mainWindow;
+}
+
+app
+  .whenReady()
+  .then(() => {
+    electronApp.setAppUserModelId("com.ricardo.network-connection");
+    writeMainLog("App ready");
+
+    app.on("browser-window-created", (_, window) => {
+      optimizer.watchWindowShortcuts(window);
+    });
+
+    runMigrations();
+    writeMainLog("Migrations completed");
+
+    const db = getDb();
+    const getVal = (key: string, fallback: string): string =>
+      (
+        db.prepare(`SELECT value FROM settings WHERE key = ?`).get(key) as
+          | { value: string }
+          | undefined
+      )?.value ?? fallback;
+
+    const intervalMinutes = Number(getVal("interval_minutes", "15"));
+    const thresholdMbps = Number(getVal("slow_threshold_mbps", "10"));
+    const connectionType = getVal("connection_type", "auto");
+
+    scheduler = new SchedulerService(
+      intervalMinutes,
+      thresholdMbps,
+      connectionType,
+    );
+    registerHandlers(scheduler);
+    writeMainLog("IPC handlers registered");
+
+    createWindow();
+
+    // Detecta rede ao vivo e envia para o renderer antes do primeiro teste
+    setTimeout(async () => {
+      try {
+        const info = await getNetworkInfo();
+        for (const win of BrowserWindow.getAllWindows()) {
+          if (!win.isDestroyed())
+            win.webContents.send(IPC_CHANNELS.NETWORK_INFO_UPDATE, info);
+        }
+      } catch {}
+      scheduler?.start();
+    }, 1500);
+
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  })
+  .catch((error) => {
+    showFatalError("Falha ao inicializar o aplicativo", error);
+  });
+
+app.on("window-all-closed", () => {
+  writeMainLog("All windows closed");
+  scheduler?.stop();
+  closeDb();
+  if (process.platform !== "darwin") app.quit();
+});
