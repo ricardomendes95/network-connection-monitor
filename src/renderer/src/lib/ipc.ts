@@ -16,6 +16,8 @@ declare global {
       getCurrentNetworkInfo: () => Promise<LiveNetworkInfo>
       exportPdf: () => Promise<{ ok: boolean }>
       savePng: (dataUrl: string) => Promise<{ ok: boolean }>
+      exportEvidence: (days: number, opts?: { contracted_mbps?: number; connection_type?: string }) => Promise<{ ok: boolean; count: number }>
+      exportEvidencePdf: (days: number, opts?: { contracted_mbps?: number; connection_type?: string }) => Promise<{ ok: boolean; count: number }>
       onTestStarted: (cb: () => void) => void
       onTestCompleted: (cb: (result: SpeedResult) => void) => void
       onTestFailed: (cb: (data: { error: string }) => void) => void
@@ -44,6 +46,12 @@ export const ipc = {
   exportPdf: () => window.electronAPI.exportPdf(),
 
   savePng: (dataUrl: string) => window.electronAPI.savePng(dataUrl),
+
+  exportEvidence: (days: number, opts?: { contracted_mbps?: number; connection_type?: string }) =>
+    window.electronAPI.exportEvidence(days, opts),
+
+  exportEvidencePdf: (days: number, opts?: { contracted_mbps?: number; connection_type?: string }) =>
+    window.electronAPI.exportEvidencePdf(days, opts),
 
   onTestStarted: (cb: () => void) => window.electronAPI.onTestStarted(cb),
   onTestCompleted: (cb: (result: SpeedResult) => void) => window.electronAPI.onTestCompleted(cb),

@@ -54,4 +54,7 @@ export function runMigrations(): void {
   addIfMissing('network_name', 'network_name TEXT')
   addIfMissing('isp_name', 'isp_name TEXT')
   addIfMissing('connection_type', "connection_type TEXT DEFAULT 'wired'")
+  addIfMissing('packet_loss', 'packet_loss REAL')
+  addIfMissing('result_url', 'result_url TEXT')
+  addIfMissing('server_name', 'server_name TEXT')
 }

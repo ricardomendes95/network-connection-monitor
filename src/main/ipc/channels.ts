@@ -17,6 +17,8 @@ export const IPC_CHANNELS = {
 
   EXPORT_PDF: 'export:pdf',
   SAVE_PNG: 'export:save-png',
+  EXPORT_EVIDENCE: 'export:evidence',
+  EXPORT_EVIDENCE_PDF: 'export:evidence-pdf',
 
   AUTOSTART_GET: 'app:autostart-get',
   AUTOSTART_SET: 'app:autostart-set'

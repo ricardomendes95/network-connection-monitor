@@ -2,18 +2,17 @@ import { useEffect, useState } from 'react'
 import { ipc } from '../../lib/ipc'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card'
 import type { InstabilityData, DailyHourSlot, DailyInterval, Settings } from '../../types'
-import { AlertTriangle, Cable, Wifi, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, Cable, Wifi, CheckCircle2, FileDown, FileText } from 'lucide-react'
 
 interface Props {
   days: number
   settings: Settings
 }
 
-/**
- * Para cada dia, encontra o intervalo de maior instabilidade.
- * Se houver múltiplos blocos no dia, retorna o período completo (do primeiro ao último bloco)
- * quando os blocos cobrem mais de metade do dia — caso contrário, retorna o bloco mais denso.
- */
+// Retorna o intervalo onde a lentidão foi mais concentrada no dia.
+// Seleciona os slots mais lentos (cobrindo no mínimo MIN_TESTS testes individuais).
+// Se esses slots forem próximos entre si (span ≤ 4h, sem gaps > 2h), mostra esse range.
+// Caso contrário, usa janela deslizante de 3h para encontrar o período com mais slow_count.
 function computeDailyIntervals(dailyHourly: DailyHourSlot[]): Map<string, DailyInterval> {
   const byDay = new Map<string, DailyHourSlot[]>()
   for (const slot of dailyHourly) {
@@ -22,47 +21,50 @@ function computeDailyIntervals(dailyHourly: DailyHourSlot[]): Map<string, DailyI
   }
 
   const result = new Map<string, DailyInterval>()
+  const MIN_TESTS = 5
 
   for (const [day, slots] of byDay) {
-    const sorted = [...slots].sort((a, b) => Number(a.hour) - Number(b.hour))
+    const bySpeed = [...slots].sort((a, b) => a.avg_download - b.avg_download)
 
-    // Agrupa em blocos contíguos (gap de até 2 horas entre slots)
-    const blocks: DailyHourSlot[][] = []
-    let current: DailyHourSlot[] = [sorted[0]]
+    const worstSlots: DailyHourSlot[] = []
+    let testCount = 0
+    for (const slot of bySpeed) {
+      worstSlots.push(slot)
+      testCount += slot.total
+      if (testCount >= MIN_TESTS) break
+    }
 
-    for (let i = 1; i < sorted.length; i++) {
-      if (Number(sorted[i].hour) - Number(sorted[i - 1].hour) <= 2) {
-        current.push(sorted[i])
-      } else {
-        blocks.push(current)
-        current = [sorted[i]]
+    const worstByHour = [...worstSlots].sort((a, b) => Number(a.hour) - Number(b.hour))
+    const span = Number(worstByHour.at(-1)!.hour) - Number(worstByHour[0].hour)
+
+    let hasGap = false
+    for (let i = 1; i < worstByHour.length; i++) {
+      if (Number(worstByHour[i].hour) - Number(worstByHour[i - 1].hour) > 2) {
+        hasGap = true
+        break
       }
     }
-    blocks.push(current)
-
-    const totalSlowAcrossBlocks = blocks.reduce(
-      (s, b) => s + b.reduce((bs, x) => bs + x.slow_count, 0),
-      0
-    )
-
-    // Período total: do primeiro ao último slot instável do dia
-    const firstHour = Number(sorted[0].hour)
-    const lastHour = Number(sorted.at(-1)!.hour)
-    const spanHours = lastHour - firstHour
-
-    // Se instabilidade espalha por > 4 horas ou tem mais de 1 bloco distinto → mostra período maior
-    const showFullSpan = blocks.length > 1 && spanHours > 4
 
     let chosen: DailyHourSlot[]
-    if (showFullSpan) {
-      chosen = sorted // todos os slots instáveis do dia
+    if (span <= 4 && !hasGap) {
+      chosen = worstByHour
     } else {
-      // Bloco com mais testes abaixo do threshold
-      chosen = blocks.reduce((a, b) => {
-        const aTotal = a.reduce((s, x) => s + x.slow_count, 0)
-        const bTotal = b.reduce((s, x) => s + x.slow_count, 0)
-        return bTotal > aTotal ? b : a
-      })
+      const allByHour = [...slots].sort((a, b) => Number(a.hour) - Number(b.hour))
+      let bestScore = -1
+      chosen = [allByHour[0]]
+
+      for (const anchor of allByHour) {
+        const wStart = Number(anchor.hour)
+        const wEnd = wStart + 3
+        const windowSlots = allByHour.filter(
+          (s) => Number(s.hour) >= wStart && Number(s.hour) <= wEnd
+        )
+        const score = windowSlots.reduce((sum, s) => sum + s.slow_count, 0)
+        if (score > bestScore) {
+          bestScore = score
+          chosen = windowSlots
+        }
+      }
     }
 
     result.set(day, {
@@ -72,8 +74,8 @@ function computeDailyIntervals(dailyHourly: DailyHourSlot[]): Map<string, DailyI
       avgDownload: chosen.reduce((s, x) => s + x.avg_download, 0) / chosen.length,
       minDownload: Math.min(...chosen.map((x) => x.min_download)),
       maxDownload: Math.max(...chosen.map((x) => x.max_download)),
-      slowCount: totalSlowAcrossBlocks,
-      totalTests: sorted.reduce((s, x) => s + x.total, 0)
+      slowCount: slots.reduce((s, x) => s + x.slow_count, 0),
+      totalTests: slots.reduce((s, x) => s + x.total, 0)
     })
   }
 
@@ -102,10 +104,27 @@ function connIcon(type: string | null): JSX.Element {
 
 export function InstabilityReport({ days, settings }: Props): JSX.Element {
   const [data, setData] = useState<InstabilityData | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const [exportingPdf, setExportingPdf] = useState(false)
 
   const contracted = Number(settings.contracted_speed_mbps ?? 0)
   const connType = settings.connection_type ?? 'auto'
   const ispName = settings.isp_name || 'Provedor'
+
+  const evidenceOpts = {
+    contracted_mbps: contracted > 0 ? contracted : undefined,
+    connection_type: connType !== 'auto' ? connType : undefined
+  }
+
+  async function handleExportEvidence(): Promise<void> {
+    setExporting(true)
+    try { await ipc.exportEvidence(days, evidenceOpts) } finally { setExporting(false) }
+  }
+
+  async function handleExportPdf(): Promise<void> {
+    setExportingPdf(true)
+    try { await ipc.exportEvidencePdf(days, evidenceOpts) } finally { setExportingPdf(false) }
+  }
 
   useEffect(() => {
     ipc
@@ -146,9 +165,31 @@ export function InstabilityReport({ days, settings }: Props): JSX.Element {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-destructive" />
-          <CardTitle className="text-sm font-medium">Relatório de Instabilidade</CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-destructive" />
+            <CardTitle className="text-sm font-medium">Relatório de Instabilidade</CardTitle>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleExportPdf}
+              disabled={exportingPdf || exporting}
+              title="Exportar dossiê em PDF (tabelas, estatísticas, para ANATEL / PROCON)"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-destructive text-destructive-foreground text-xs font-medium hover:bg-destructive/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              {exportingPdf ? 'Gerando PDF...' : 'Exportar PDF'}
+            </button>
+            <button
+              onClick={handleExportEvidence}
+              disabled={exporting || exportingPdf}
+              title="Exportar dados brutos em CSV (Excel / LibreOffice)"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border text-xs font-medium hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              {exporting ? 'Exportando...' : 'CSV'}
+            </button>
+          </div>
         </div>
         <CardDescription className="text-xs">
           Dossiê para questionar o {ispName} · últimos {days} dias ·{' '}

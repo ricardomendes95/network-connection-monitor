@@ -118,8 +118,9 @@ export class SchedulerService {
         `
         INSERT INTO speed_results
           (tested_at, download, upload, ping, jitter, server_host, is_slow,
-           network_name, isp_name, connection_type)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           network_name, isp_name, connection_type,
+           packet_loss, result_url, server_name)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       ).run(
         result.testedAt,
@@ -132,6 +133,9 @@ export class SchedulerService {
         netInfo.networkName,
         ispName,
         resolvedType,
+        result.packetLoss,
+        result.resultUrl,
+        result.serverName,
       );
 
       const saved = db

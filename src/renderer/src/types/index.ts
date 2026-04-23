@@ -6,10 +6,13 @@ export interface SpeedResult {
   ping: number
   jitter: number | null
   server_host: string | null
+  server_name: string | null
   is_slow: number
   network_name: string | null
   isp_name: string | null
   connection_type: 'wifi' | 'wired' | null
+  packet_loss: number | null
+  result_url: string | null
 }
 
 export interface Settings {

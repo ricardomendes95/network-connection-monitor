@@ -21,6 +21,9 @@ export interface SpeedResult {
   ping: number;
   jitter: number;
   serverHost: string;
+  serverName: string;
+  packetLoss: number | null;
+  resultUrl: string | null;
   testedAt: string;
 }
 
@@ -246,6 +249,8 @@ interface OoklaResult {
   upload: { bandwidth: number };
   server: { host?: string; name?: string };
   timestamp: string;
+  packetLoss?: number;
+  result?: { id?: string; url?: string; persisted?: boolean };
 }
 
 function parseOoklaOutput(raw: string): OoklaResult {
@@ -284,7 +289,10 @@ export async function runSpeedTest(): Promise<SpeedResult> {
     upload: result.upload.bandwidth / 125000,
     ping: result.ping.latency,
     jitter: result.ping.jitter ?? 0,
-    serverHost: result.server.host ?? result.server.name ?? "unknown",
+    serverHost: result.server.host ?? "unknown",
+    serverName: result.server.name ?? result.server.host ?? "unknown",
+    packetLoss: result.packetLoss ?? null,
+    resultUrl: result.result?.persisted && result.result.url ? result.result.url : null,
     testedAt: new Date().toISOString(),
   };
 }

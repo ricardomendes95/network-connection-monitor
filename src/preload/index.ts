@@ -44,6 +44,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   savePng: (dataUrl: string) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_PNG, dataUrl),
 
+  exportEvidence: (days: number, opts?: { contracted_mbps?: number; connection_type?: string }) =>
+    ipcRenderer.invoke(IPC_CHANNELS.EXPORT_EVIDENCE, days, opts),
+
+  exportEvidencePdf: (days: number, opts?: { contracted_mbps?: number; connection_type?: string }) =>
+    ipcRenderer.invoke(IPC_CHANNELS.EXPORT_EVIDENCE_PDF, days, opts),
+
   removeAllListeners: (channel: string) => {
     ipcRenderer.removeAllListeners(channel)
   },
