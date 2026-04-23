@@ -1,5 +1,4 @@
 import { app, shell, BrowserWindow, dialog } from "electron";
-import { createOverlayWindow } from "./services/overlay-toast.service";
 import { join } from "node:path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import { runMigrations } from "./database/migrations";
@@ -7,6 +6,7 @@ import { closeDb, getDb } from "./database/connection";
 import { SchedulerService } from "./services/scheduler.service";
 import { registerHandlers } from "./ipc/handlers";
 import { getNetworkInfo } from "./services/network-info.service";
+import { createTray } from "./services/tray.service";
 import { IPC_CHANNELS } from "./ipc/channels";
 import { writeMainLog } from "./utils/logger";
 
@@ -135,7 +135,9 @@ app
     writeMainLog("IPC handlers registered");
 
     createWindow();
-    createOverlayWindow(join(__dirname, "../preload/index.js"));
+    createTray({
+      onRunNow: () => scheduler?.runNow(),
+    });
 
     // Detecta rede ao vivo e envia para o renderer antes do primeiro teste
     setTimeout(async () => {
@@ -158,8 +160,13 @@ app
   });
 
 app.on("window-all-closed", () => {
-  writeMainLog("All windows closed");
+  // O app continua rodando em segundo plano pelo tray/menu bar.
+  // Para sair, o usuário usa a opção "Sair" do menu do tray.
+  writeMainLog("All windows closed — mantendo app ativo no tray");
+});
+
+app.on("before-quit", () => {
+  writeMainLog("Before quit — parando scheduler e fechando DB");
   scheduler?.stop();
   closeDb();
-  if (process.platform !== "darwin") app.quit();
 });
