@@ -149,7 +149,7 @@ export function registerHandlers(scheduler: SchedulerService): void {
   })
 
   ipcMain.handle(IPC_CHANNELS.RUN_NOW, async () => {
-    scheduler.updateInterval(scheduler['intervalMs'] / 60000)
+    scheduler.runNow()
     return { queued: true }
   })
 

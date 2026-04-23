@@ -3,6 +3,7 @@ import type { Settings, HistoryResponse, HeatmapPoint, DailyPoint, WeeklyPoint, 
 declare global {
   interface Window {
     electronAPI: {
+      platform: NodeJS.Platform
       getHistory: (filter?: { days?: number; page?: number; limit?: number }) => Promise<HistoryResponse>
       getChartData: (type: 'heatmap', days?: number) => Promise<HeatmapPoint[]>
       getChartData: (type: 'daily', days?: number) => Promise<DailyPoint[]>
@@ -56,5 +57,7 @@ export const ipc = {
   removeAllListeners: (channel: string) => window.electronAPI.removeAllListeners(channel),
 
   getAutostart: () => window.electronAPI.getAutostart(),
-  setAutostart: (enable: boolean) => window.electronAPI.setAutostart(enable)
+  setAutostart: (enable: boolean) => window.electronAPI.setAutostart(enable),
+
+  getPlatform: (): NodeJS.Platform => window.electronAPI.platform
 }

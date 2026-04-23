@@ -4,6 +4,8 @@ import { IPC_CHANNELS } from '../main/ipc/channels'
 type Callback<T = unknown> = (data: T) => void
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  platform: process.platform as NodeJS.Platform,
+
   getHistory: (filter?: { days?: number; page?: number; limit?: number }) =>
     ipcRenderer.invoke(IPC_CHANNELS.GET_HISTORY, filter),
 
