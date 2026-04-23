@@ -1,238 +1,185 @@
 # Conexão Flow
 
-Aplicativo desktop em Electron + React para monitorar velocidade de internet, armazenar histórico em SQLite e exibir alertas quando a conexão ficar abaixo do limite configurado.
+Aplicativo desktop em Electron + React para monitorar velocidade de internet, armazenar histórico em SQLite e alertar em transições de conectividade (online/offline). Funciona como menu bar app — o teste roda silenciosamente em segundo plano.
+
+## Destaques
+
+- **Menu bar / tray** em todas as plataformas: status atual (online/offline/testando), download, upload, ping, última verificação e botão "Testar agora".
+- **Testes silenciosos**: os speed tests rodam em background sem roubar foco da tela.
+- **Alertas inteligentes**: notificação dispara apenas em transições `online → offline` ("Sem internet") e `offline → online` ("Internet voltou"). Nada de spam a cada teste.
+- **Intervalos configuráveis** de 1 minuto até 4 horas.
+- **Ookla Speedtest CLI oficial** — roda nativo em Apple Silicon, x64, ARM e Windows.
+- **Autostart** com o sistema (macOS, Windows, Linux).
+- **Histórico em SQLite** com gráficos por hora, dia da semana, timeline e detecção de instabilidade.
 
 ## Stack
 
-- Electron 32
-- electron-vite
-- React 18
-- TypeScript
-- Tailwind CSS
+- Electron 32 + electron-vite
+- React 18 + TypeScript + Tailwind CSS
 - Recharts
-- SQLite com better-sqlite3
-- speedtest-net
+- SQLite via `better-sqlite3`
+- [Ookla Speedtest CLI](https://www.speedtest.net/apps/cli) (baixado sob demanda e cacheado em `userData/speedtest-cli/`)
 
 ## Requisitos
 
-### Linux
+### macOS
+- Node.js 18+ (20 LTS recomendado)
+- `pnpm` ou `npm`
 
-- Node.js 20 LTS
-- npm
-- build-essential
-- Python 3
-- wine32 apenas se for gerar instalador Windows a partir do Linux
+### Linux
+- Node.js 18+ (20 LTS recomendado)
+- `pnpm` ou `npm`
+- `build-essential`, Python 3 (para `better-sqlite3`)
 
 ### Windows
+- Node.js 18+ (20 LTS recomendado)
+- `pnpm` ou `npm`
+- Python 3.11 + Visual Studio 2022 Build Tools com C++ (para compilar `better-sqlite3` e `lzma-native`)
 
-- Node.js 20 LTS
-- npm ou pnpm
-- Python 3.11
-- Visual Studio 2022 Build Tools com C++
+## Instalação e execução
 
-## Dependencias nativas
+### Scripts de (re)instalação
 
-Este projeto usa modulos nativos, principalmente `better-sqlite3`. O fluxo de build para Windows tambem pode exigir compilacao de dependencias transitivas como `lzma-native`.
-
-Impacto pratico:
-
-- o build Windows deve ser feito no Windows
-- no Windows, Python e C++ Build Tools precisam estar configurados
-- no Linux, o build Linux funciona normalmente com toolchain padrao
-
-## Instalacao no Linux
-
-### Ubuntu/Debian
+A forma mais rápida de instalar o app na sua máquina:
 
 ```bash
-sudo apt update
-sudo apt install -y build-essential python3 make g++
+# macOS / Linux
+pnpm app:install          # instala (ou reinstala) — build + copia para /Applications
+pnpm app:install:no-build # pula o build e usa dist/ existente
+pnpm app:uninstall        # remove o app e dados de suporte
 ```
 
-### Instalar Node 20
-
-Se voce usa nvm:
-
-```bash
-nvm install 20
-nvm use 20
-node -v
-npm -v
+```powershell
+# Windows
+pnpm app:install:win
+pnpm app:uninstall:win
 ```
 
-### Instalar dependencias do projeto
-
-```bash
-cd /home/ricardo/dev/network-connection
-npm install
-```
-
-## Executar no Linux
+Os scripts estão em `scripts/install.sh` e `scripts/install.ps1`.
 
 ### Desenvolvimento
 
 ```bash
-npm run dev
+pnpm install
+pnpm dev
 ```
 
-### Build de producao
+### Build manual
 
 ```bash
-npm run build
+pnpm build           # apenas compila o bundle
+pnpm dist            # macOS / Linux — gera o instalador em dist/
+pnpm dist:win        # Windows — gera o instalador NSIS + portable em dist/
 ```
 
-### Empacotar para Linux
+> ⚠️ O build Windows deve ser feito em uma máquina Windows. Um `predist:win` bloqueia a execução em host Linux porque os módulos nativos compilados lá ficam inválidos.
+
+## Setup detalhado por plataforma
+
+### macOS
 
 ```bash
-npm run dist
+# Instala Node via nvm, se ainda não tiver
+nvm install 20 && nvm use 20
+
+# Clona o projeto, entra no diretório e instala tudo
+pnpm install
+
+# Build + instalação em /Applications em um comando
+pnpm app:install
 ```
 
-Arquivos gerados em `dist/`.
+O app aparece na menu bar (parte superior direita da tela). Para abrir a janela principal, clique no ícone e depois em "Abrir janela principal".
 
-## Instalacao no Windows
+### Linux (Ubuntu/Debian)
 
-Recomendacao: copie o projeto para uma pasta nativa do Windows, por exemplo `C:\dev\network-connection`, em vez de rodar direto em caminho UNC do WSL.
+```bash
+sudo apt update
+sudo apt install -y build-essential python3 make g++
 
-### 1. Instalar Node.js 20 com nvm-windows
+nvm install 20 && nvm use 20
+pnpm install
+pnpm dist
+```
 
-No PowerShell:
+Artefatos (`AppImage`, `.deb`) são gerados em `dist/`.
+
+### Windows
+
+Recomendação: clone o projeto em um caminho nativo (ex: `C:\dev\network-connection-monitor`), não dentro do WSL.
+
+**1. Node.js 20 via nvm-windows**
 
 ```powershell
 nvm install 20.18.0
 nvm use 20.18.0
-node -v
-npm -v
 ```
 
-### 2. Instalar Python 3.11
+**2. Python 3.11**
 
 ```powershell
 winget install -e --id Python.Python.3.11
 ```
 
-Depois feche e reabra o PowerShell e valide:
+Feche e reabra o PowerShell. Se necessário, configure o `node-gyp`:
 
 ```powershell
-py -3.11 --version
-python --version
+setx PYTHON "C:\Users\<SEU_USUARIO>\AppData\Local\Programs\Python\Python311\python.exe"
+setx npm_config_python "C:\Users\<SEU_USUARIO>\AppData\Local\Programs\Python\Python311\python.exe"
 ```
 
-Se necessario, configure as variaveis de ambiente para o node-gyp:
-
-```powershell
-$env:PYTHON="C:\Users\Ricardo Mendes\AppData\Local\Programs\Python\Python311\python.exe"
-$env:npm_config_python="C:\Users\Ricardo Mendes\AppData\Local\Programs\Python\Python311\python.exe"
-```
-
-Para persistir:
-
-```powershell
-setx PYTHON "C:\Users\Ricardo Mendes\AppData\Local\Programs\Python\Python311\python.exe"
-setx npm_config_python "C:\Users\Ricardo Mendes\AppData\Local\Programs\Python\Python311\python.exe"
-```
-
-### 3. Instalar Visual Studio 2022 Build Tools
-
-Opcao silenciosa:
+**3. Visual Studio 2022 Build Tools**
 
 ```powershell
 winget install -e --id Microsoft.VisualStudio.2022.BuildTools --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
 ```
 
-Opcao com interface:
+Inclua os componentes: *Desktop development with C++*, *MSVC v143*, *Windows 10/11 SDK*.
+
+**4. Instalar e buildar**
 
 ```powershell
-winget install -e --id Microsoft.VisualStudio.2022.BuildTools
-```
-
-Na instalacao, inclua:
-
-- Desktop development with C++
-- MSVC v143
-- Windows 10 SDK ou Windows 11 SDK
-
-### 4. Instalar dependencias do projeto
-
-Com npm:
-
-```powershell
-cd "C:\dev\network-connection"
-npm install
-```
-
-Com pnpm:
-
-```powershell
-cd "C:\dev\network-connection"
-pnpm approve-builds
+cd C:\dev\network-connection-monitor
 pnpm install
-pnpm rebuild electron better-sqlite3 lzma-native esbuild
+pnpm approve-builds   # aprove: better-sqlite3, electron, esbuild, lzma-native
+pnpm app:install:win
 ```
 
-Se o pnpm avisar sobre scripts ignorados, aprove pelo menos:
+## Uso
 
-- better-sqlite3
-- electron
-- esbuild
-- lzma-native
+### Menu bar / Tray
 
-## Executar no Windows
+O ícone na barra de menu (macOS) ou na system tray (Windows/Linux) mostra:
 
-### Desenvolvimento com npm
+- **Status**: ● online / ● offline / ⟳ testando…
+- **Velocidade atual** (no macOS, aparece no próprio título)
+- **Última verificação** no menu
+- **Testar agora** — dispara um teste imediatamente
+- **Abrir janela principal** — recria a janela se ela foi fechada
+- **Sair** — encerra o app
 
-```powershell
-cd "C:\dev\network-connection"
-npm run dev
-```
+Fechar a janela principal **não** fecha o app. Ele continua rodando em segundo plano monitorando sua conexão.
 
-### Desenvolvimento com pnpm
+### Configurações
 
-```powershell
-cd "C:\dev\network-connection"
-pnpm run dev
-```
+Disponíveis na página *Configurações* da janela principal:
 
-### Build de producao
+- **Plano contratado** (de 50 Mbps a 1 Gbps) e **provedor (ISP)** — usados pelo gráfico de instabilidade para calcular a referência ANATEL (40% cabo / 30% WiFi).
+- **Tipo de conexão**: automático, cabeada ou WiFi.
+- **Intervalo entre testes**: 1, 2, 3, 5, 10, 15 (recomendado), 20, 30, 45, 60, 120 ou 240 minutos.
+- **Limite para alerta de rede lenta** — usado apenas para marcar o resultado como "slow" no histórico.
+- **Notificações do sistema** — dispara notificações desktop nas transições online/offline.
+- **Iniciar com o sistema** — registra o app para abrir automaticamente (o rótulo adapta-se a Windows / macOS / Linux).
 
-```powershell
-npm run build
-```
+## Onde ficam os dados
 
-## Gerar instalador Windows
+| Plataforma | Banco SQLite                                             | Log                                                      | Cache do Speedtest CLI                                 |
+| ---------- | -------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------ |
+| macOS      | `~/Library/Application Support/network-connection/speed.db` | `~/Library/Application Support/network-connection/main.log` | `~/Library/Application Support/network-connection/speedtest-cli/` |
+| Linux      | `~/.config/network-connection/speed.db`                 | `~/.config/network-connection/main.log`                 | `~/.config/network-connection/speedtest-cli/`          |
+| Windows    | `%APPDATA%\network-connection\speed.db`                 | `%APPDATA%\network-connection\main.log`                 | `%APPDATA%\network-connection\speedtest-cli\`          |
 
-O instalador Windows deve ser gerado no Windows. O projeto bloqueia `dist:win` em host Linux porque os modulos nativos gerados la ficam invalidos no Windows.
-
-```powershell
-cd "C:\dev\network-connection"
-npm run dist:win
-```
-
-Arquivos gerados em `dist/`.
-
-## Comandos principais
-
-```bash
-npm run dev
-npm run build
-npm run dist
-npm run dist:win
-```
-
-## Banco de dados
-
-O banco SQLite fica no diretoria de dados do aplicativo.
-
-- Linux: `~/.config/network-connection/speed.db`
-- Windows: `%APPDATA%\network-connection\speed.db`
-
-## Logs
-
-O processo principal grava log em `main.log`.
-
-- Linux: `~/.config/network-connection/main.log`
-- Windows: `%APPDATA%\network-connection\main.log`
-
-Exemplo no PowerShell:
+Ver o log no PowerShell:
 
 ```powershell
 type "$env:APPDATA\network-connection\main.log"
@@ -240,11 +187,17 @@ type "$env:APPDATA\network-connection\main.log"
 
 ## Problemas comuns
 
-### `Electron uninstall` ao rodar `pnpm run dev`
+### `darwin on arm64 not supported`
 
-Causa comum: install incompleto do Electron via pnpm.
+Esse erro só ocorria em versões antigas que usavam `speedtest-net`. A partir dos commits recentes o app baixa o Ookla CLI oficial (binário universal no macOS, nativo em Apple Silicon). Basta reinstalar:
 
-Correcao:
+```bash
+pnpm app:reinstall
+```
+
+### `Electron uninstall` ao rodar `pnpm dev`
+
+Install incompleto do Electron via pnpm.
 
 ```powershell
 pnpm approve-builds
@@ -254,34 +207,28 @@ pnpm rebuild electron better-sqlite3
 
 ### `better_sqlite3.node is not a valid Win32 application`
 
-Causa: build Windows gerado no Linux.
-
-Correcao: gerar `dist:win` em maquina Windows.
+Build Windows gerado no Linux. Gere `pnpm dist:win` em uma máquina Windows.
 
 ### `Could not find any Python installation to use`
 
-Causa: Python nao configurado para o node-gyp.
-
-Correcao: instalar Python 3.11 e configurar `PYTHON` e `npm_config_python`.
+`node-gyp` não acha Python. Instale Python 3.11 e configure `PYTHON` / `npm_config_python`.
 
 ### `Could not find any Visual Studio installation to use`
 
-Causa: Build Tools C++ ausente.
-
-Correcao: instalar Visual Studio 2022 Build Tools com workload C++.
+Instale o Visual Studio 2022 Build Tools com a workload *Desktop development with C++*.
 
 ### `Ignored build scripts` no pnpm
-
-Causa: protecao do pnpm para scripts de instalacao.
-
-Correcao:
 
 ```powershell
 pnpm approve-builds
 ```
 
-## Observacoes
+### O ícone do tray some no Linux
 
-- O renderer usa `HashRouter`, o que e necessario para empacotamento via `file://`.
-- `speedtest-net` fica em `asarUnpack` para evitar falhas no app empacotado.
-- Para ambiente Windows, `npm` tende a ser o caminho mais simples.
+Alguns ambientes desktop exigem uma extensão (ex: GNOME precisa de *AppIndicator and KStatusNotifierItem Support*) para mostrar ícones de tray.
+
+## Observações
+
+- O renderer usa `HashRouter` para funcionar com `file://` no app empacotado.
+- O Ookla CLI é baixado uma única vez (≈1 MB) na primeira execução e reutilizado.
+- Para parar completamente o app, use "Sair" pelo menu do tray — fechar a janela principal apenas oculta a UI.
