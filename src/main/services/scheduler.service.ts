@@ -1,11 +1,19 @@
 import { BrowserWindow } from "electron";
 import { getDb } from "../database/connection";
 import { runSpeedTest } from "./speedtest.service";
-import { showSlowNetworkNotification } from "./notification.service";
+import {
+  showInternetDownNotification,
+  showInternetRestoredNotification,
+} from "./notification.service";
 import { getNetworkInfo } from "./network-info.service";
 import { IPC_CHANNELS } from "../ipc/channels";
 import { writeMainLog } from "../utils/logger";
-import { showOverlayWindow, hideOverlayWindowAfter } from "./overlay-toast.service";
+import {
+  setTrayOffline,
+  setTrayOnline,
+  setTrayTesting,
+  type ConnectivityStatus,
+} from "./tray.service";
 
 export class SchedulerService {
   private timer: NodeJS.Timeout | null = null;
@@ -15,6 +23,7 @@ export class SchedulerService {
   private thresholdMbps: number;
   private connectionTypeOverride: string;
   private nextTestAt: number = 0;
+  private lastConnectivity: ConnectivityStatus = "unknown";
 
   constructor(
     intervalMinutes: number,
@@ -53,6 +62,10 @@ export class SchedulerService {
     this.connectionTypeOverride = type;
   }
 
+  runNow(): void {
+    this.executeTest();
+  }
+
   private scheduleNext(): void {
     if (this.timer) clearTimeout(this.timer);
     this.nextTestAt = Date.now() + this.intervalMs;
@@ -76,7 +89,7 @@ export class SchedulerService {
   private async executeTest(): Promise<void> {
     if (this.isRunning) return;
     this.isRunning = true;
-    showOverlayWindow();
+    setTrayTesting(true);
     this.broadcast(IPC_CHANNELS.TEST_STARTED, null);
 
     try {
@@ -93,7 +106,6 @@ export class SchedulerService {
           ? netInfo.connectionType
           : this.connectionTypeOverride;
 
-      // ISP pode ser substituído pelo valor configurado pelo usuário
       const userIsp = (
         db
           .prepare("SELECT value FROM settings WHERE key = 'isp_name'")
@@ -126,21 +138,39 @@ export class SchedulerService {
         .prepare("SELECT * FROM speed_results ORDER BY id DESC LIMIT 1")
         .get();
 
+      setTrayOnline({
+        download: result.download,
+        upload: result.upload,
+        ping: result.ping,
+        testedAt: result.testedAt,
+      });
+
       this.broadcast(IPC_CHANNELS.TEST_COMPLETED, saved);
-      hideOverlayWindowAfter(3000);
+
+      if (this.lastConnectivity === "offline") {
+        showInternetRestoredNotification(result.download);
+      }
+      this.lastConnectivity = "online";
 
       if (isSlow) {
-        this.broadcast(IPC_CHANNELS.SPEED_ALERT, { download: result.download });
-        showSlowNetworkNotification(result.download);
+        this.broadcast(IPC_CHANNELS.SPEED_ALERT, {
+          download: result.download,
+        });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      const testedAt = new Date().toISOString();
       writeMainLog("Speed test failed", {
         message,
         stack: err instanceof Error ? err.stack : undefined,
       });
+      setTrayOffline(testedAt);
       this.broadcast(IPC_CHANNELS.TEST_FAILED, { error: message });
-      hideOverlayWindowAfter(4000);
+
+      if (this.lastConnectivity !== "offline") {
+        showInternetDownNotification();
+      }
+      this.lastConnectivity = "offline";
     } finally {
       this.isRunning = false;
     }

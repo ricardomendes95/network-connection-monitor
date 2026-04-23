@@ -1,5 +1,4 @@
 import { app, shell, BrowserWindow, dialog } from "electron";
-import { createOverlayWindow } from "./services/overlay-toast.service";
 import { join } from "node:path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import { runMigrations } from "./database/migrations";
@@ -7,10 +6,23 @@ import { closeDb, getDb } from "./database/connection";
 import { SchedulerService } from "./services/scheduler.service";
 import { registerHandlers } from "./ipc/handlers";
 import { getNetworkInfo } from "./services/network-info.service";
+import { createTray } from "./services/tray.service";
 import { IPC_CHANNELS } from "./ipc/channels";
 import { writeMainLog } from "./utils/logger";
 
 let scheduler: SchedulerService | null = null;
+let mainWindowRef: BrowserWindow | null = null;
+
+function ensureMainWindow(): BrowserWindow {
+  if (mainWindowRef && !mainWindowRef.isDestroyed()) {
+    if (mainWindowRef.isMinimized()) mainWindowRef.restore();
+    mainWindowRef.show();
+    mainWindowRef.focus();
+    return mainWindowRef;
+  }
+  mainWindowRef = createWindow();
+  return mainWindowRef;
+}
 
 function showFatalError(title: string, error: unknown): void {
   const message =
@@ -63,7 +75,10 @@ function createWindow(): BrowserWindow {
   mainWindow.once("ready-to-show", revealWindow);
   mainWindow.webContents.once("did-finish-load", revealWindow);
   mainWindow.on("show", () => writeMainLog("Main window shown"));
-  mainWindow.on("closed", () => writeMainLog("Main window closed"));
+  mainWindow.on("closed", () => {
+    writeMainLog("Main window closed");
+    if (mainWindowRef === mainWindow) mainWindowRef = null;
+  });
   mainWindow.webContents.on(
     "did-fail-load",
     (_event, errorCode, errorDescription, validatedURL) => {
@@ -134,8 +149,11 @@ app
     registerHandlers(scheduler);
     writeMainLog("IPC handlers registered");
 
-    createWindow();
-    createOverlayWindow(join(__dirname, "../preload/index.js"));
+    mainWindowRef = createWindow();
+    createTray({
+      onRunNow: () => scheduler?.runNow(),
+      onOpenMain: () => ensureMainWindow(),
+    });
 
     // Detecta rede ao vivo e envia para o renderer antes do primeiro teste
     setTimeout(async () => {
@@ -150,7 +168,7 @@ app
     }, 1500);
 
     app.on("activate", () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+      ensureMainWindow();
     });
   })
   .catch((error) => {
@@ -158,8 +176,13 @@ app
   });
 
 app.on("window-all-closed", () => {
-  writeMainLog("All windows closed");
+  // O app continua rodando em segundo plano pelo tray/menu bar.
+  // Para sair, o usuário usa a opção "Sair" do menu do tray.
+  writeMainLog("All windows closed — mantendo app ativo no tray");
+});
+
+app.on("before-quit", () => {
+  writeMainLog("Before quit — parando scheduler e fechando DB");
   scheduler?.stop();
   closeDb();
-  if (process.platform !== "darwin") app.quit();
 });

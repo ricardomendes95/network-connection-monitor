@@ -9,11 +9,18 @@ import { Check, Info, Wifi, Cable } from 'lucide-react'
 import { ipc } from '../lib/ipc'
 
 const INTERVAL_OPTIONS = [
-  { value: '5', label: 'A cada 5 min', note: 'Muito frequente, usa mais banda' },
+  { value: '1', label: 'A cada 1 min', note: 'Extremamente frequente, uso intenso de banda — use apenas para diagnóstico' },
+  { value: '2', label: 'A cada 2 min', note: 'Muito frequente, consumo alto de banda' },
+  { value: '3', label: 'A cada 3 min', note: 'Frequente, consumo alto de banda' },
+  { value: '5', label: 'A cada 5 min', note: 'Frequente, usa mais banda' },
   { value: '10', label: 'A cada 10 min', note: '' },
   { value: '15', label: 'A cada 15 min (recomendado)', note: 'Padrão da indústria para monitoramento ISP' },
+  { value: '20', label: 'A cada 20 min', note: '' },
   { value: '30', label: 'A cada 30 min', note: '' },
-  { value: '60', label: 'A cada 1 hora', note: '' }
+  { value: '45', label: 'A cada 45 min', note: '' },
+  { value: '60', label: 'A cada 1 hora', note: '' },
+  { value: '120', label: 'A cada 2 horas', note: '' },
+  { value: '240', label: 'A cada 4 horas', note: '' }
 ]
 
 const THRESHOLD_OPTIONS = [
@@ -37,6 +44,19 @@ const CONTRACTED_PRESETS = [
   { value: '1000', label: '1 Gbps' }
 ]
 
+function getAutostartLabel(platform: NodeJS.Platform): string {
+  switch (platform) {
+    case 'win32':
+      return 'Iniciar com o Windows'
+    case 'darwin':
+      return 'Iniciar com o macOS'
+    case 'linux':
+      return 'Iniciar com o sistema (Linux)'
+    default:
+      return 'Iniciar com o sistema'
+  }
+}
+
 export function SettingsPage(): JSX.Element {
   const { settings, saveSettings } = useSettings()
   const [saved, setSaved] = useState(false)
@@ -48,6 +68,7 @@ export function SettingsPage(): JSX.Element {
   const [connType, setConnType] = useState(settings.connection_type ?? 'auto')
   const [ispName, setIspName] = useState(settings.isp_name ?? '')
   const [autostart, setAutostart] = useState(false)
+  const autostartLabel = getAutostartLabel(ipc.getPlatform())
 
   useEffect(() => {
     setInterval(settings.interval_minutes)
@@ -231,7 +252,7 @@ export function SettingsPage(): JSX.Element {
 
           <div className="flex items-center justify-between">
             <div>
-              <Label>Iniciar com o Windows</Label>
+              <Label>{autostartLabel}</Label>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Abrir o monitor automaticamente ao ligar o computador
               </p>
