@@ -1,4 +1,4 @@
-# Network Monitor
+# Conexão Flow
 
 Aplicativo desktop em Electron + React para monitorar velocidade de internet, armazenar histórico em SQLite e exibir alertas quando a conexão ficar abaixo do limite configurado.
 

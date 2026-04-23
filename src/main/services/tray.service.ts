@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Menu, nativeImage, Tray } from 'electron'
+import { join } from 'node:path'
 import { getOverlayWindow } from './overlay-toast.service'
 
 export type ConnectivityStatus = 'online' | 'offline' | 'unknown'
@@ -137,7 +138,11 @@ export function createTray(options: {
   runTestNow = options.onRunNow
   openMainWindow = options.onOpenMain
 
-  tray = new Tray(nativeImage.createEmpty())
+  const iconPath = app.isPackaged
+    ? join(process.resourcesPath, 'resources', 'tray-icon.png')
+    : join(app.getAppPath(), 'resources', 'tray-icon.png')
+  const trayIcon = nativeImage.createFromPath(iconPath)
+  tray = new Tray(trayIcon.isEmpty() ? nativeImage.createEmpty() : trayIcon)
   tray.on('click', () => {
     tray?.popUpContextMenu()
   })

@@ -44,6 +44,12 @@ process.on("unhandledRejection", (reason) => {
   showFatalError("Promise rejeitada no processo principal", reason);
 });
 
+function getIconPath(): string {
+  return app.isPackaged
+    ? join(process.resourcesPath, "resources", "tray-icon.png")
+    : join(app.getAppPath(), "resources", "tray-icon.png");
+}
+
 function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
     width: 1200,
@@ -51,9 +57,10 @@ function createWindow(): BrowserWindow {
     minWidth: 900,
     minHeight: 600,
     show: true,
-    title: "Network Monitor",
+    title: "Conexão Flow",
     autoHideMenuBar: true,
     backgroundColor: "#101418",
+    icon: getIconPath(),
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
