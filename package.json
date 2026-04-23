@@ -30,7 +30,6 @@
     "lucide-react": "^0.447.0",
     "react-router-dom": "^6.26.2",
     "recharts": "^2.12.7",
-    "speedtest-net": "^2.2.0",
     "tailwind-merge": "^2.5.2",
     "zustand": "^4.5.5"
   },
@@ -63,9 +62,6 @@
     "directories": {
       "output": "dist"
     },
-    "asarUnpack": [
-      "node_modules/speedtest-net/**/*"
-    ],
     "linux": {
       "target": [
         "AppImage",
