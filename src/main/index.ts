@@ -11,6 +11,18 @@ import { IPC_CHANNELS } from "./ipc/channels";
 import { writeMainLog } from "./utils/logger";
 
 let scheduler: SchedulerService | null = null;
+let mainWindowRef: BrowserWindow | null = null;
+
+function ensureMainWindow(): BrowserWindow {
+  if (mainWindowRef && !mainWindowRef.isDestroyed()) {
+    if (mainWindowRef.isMinimized()) mainWindowRef.restore();
+    mainWindowRef.show();
+    mainWindowRef.focus();
+    return mainWindowRef;
+  }
+  mainWindowRef = createWindow();
+  return mainWindowRef;
+}
 
 function showFatalError(title: string, error: unknown): void {
   const message =
@@ -63,7 +75,10 @@ function createWindow(): BrowserWindow {
   mainWindow.once("ready-to-show", revealWindow);
   mainWindow.webContents.once("did-finish-load", revealWindow);
   mainWindow.on("show", () => writeMainLog("Main window shown"));
-  mainWindow.on("closed", () => writeMainLog("Main window closed"));
+  mainWindow.on("closed", () => {
+    writeMainLog("Main window closed");
+    if (mainWindowRef === mainWindow) mainWindowRef = null;
+  });
   mainWindow.webContents.on(
     "did-fail-load",
     (_event, errorCode, errorDescription, validatedURL) => {
@@ -134,9 +149,10 @@ app
     registerHandlers(scheduler);
     writeMainLog("IPC handlers registered");
 
-    createWindow();
+    mainWindowRef = createWindow();
     createTray({
       onRunNow: () => scheduler?.runNow(),
+      onOpenMain: () => ensureMainWindow(),
     });
 
     // Detecta rede ao vivo e envia para o renderer antes do primeiro teste
@@ -152,7 +168,7 @@ app
     }, 1500);
 
     app.on("activate", () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+      ensureMainWindow();
     });
   })
   .catch((error) => {

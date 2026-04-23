@@ -23,6 +23,7 @@ const state: TrayState = {
 
 let tray: Tray | null = null
 let runTestNow: (() => Promise<void> | void) | null = null
+let openMainWindow: (() => void) | null = null
 
 function formatClock(iso: string | null): string {
   if (!iso) return '—'
@@ -60,6 +61,17 @@ function getMainWindow(): BrowserWindow | null {
       (w) => !w.isDestroyed() && w !== overlay
     ) ?? null
   )
+}
+
+function handleOpenMain(): void {
+  const main = getMainWindow()
+  if (main) {
+    if (main.isMinimized()) main.restore()
+    main.show()
+    main.focus()
+    return
+  }
+  openMainWindow?.()
 }
 
 function rebuildMenu(): void {
@@ -106,13 +118,7 @@ function rebuildMenu(): void {
     },
     {
       label: 'Abrir janela principal',
-      click: () => {
-        const main = getMainWindow()
-        if (!main) return
-        if (main.isMinimized()) main.restore()
-        main.show()
-        main.focus()
-      },
+      click: () => handleOpenMain(),
     },
     { type: 'separator' },
     { label: 'Sair', role: 'quit' },
@@ -125,9 +131,11 @@ function rebuildMenu(): void {
 
 export function createTray(options: {
   onRunNow: () => Promise<void> | void
+  onOpenMain: () => void
 }): void {
   if (tray) return
   runTestNow = options.onRunNow
+  openMainWindow = options.onOpenMain
 
   tray = new Tray(nativeImage.createEmpty())
   tray.on('click', () => {
