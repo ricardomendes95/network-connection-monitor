@@ -2,6 +2,10 @@
   "name": "network-connection",
   "version": "1.0.0",
   "description": "Monitor automático de velocidade de internet",
+  "author": {
+    "name": "Ricardo Mendes",
+    "email": "sr_ricardomendes@hotmail.com"
+  },
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -66,6 +70,7 @@
     "appId": "com.ricardo.network-connection",
     "productName": "Network Monitor",
     "asar": false,
+    "publish": null,
     "directories": {
       "output": "dist"
     },
@@ -73,7 +78,9 @@
       "target": [
         "AppImage",
         "deb"
-      ]
+      ],
+      "maintainer": "Ricardo Mendes <sr_ricardomendes@hotmail.com>",
+      "category": "Network"
     },
     "win": {
       "target": [
