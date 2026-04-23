@@ -60,15 +60,10 @@
   "build": {
     "appId": "com.ricardo.network-connection",
     "productName": "Network Monitor",
+    "asar": false,
     "directories": {
       "output": "dist"
     },
-    "asarUnpack": [
-      "node_modules/speedtest-net/**/*",
-      "node_modules/lzma-native/**/*",
-      "node_modules/decompress-tarxz/**/*",
-      "node_modules/better-sqlite3/**/*"
-    ],
     "linux": {
       "target": [
         "AppImage",
