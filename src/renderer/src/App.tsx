@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Charts } from './pages/Charts'
 import { HistoryPage } from './pages/History'
 import { SettingsPage } from './pages/Settings'
+import { NetworksPage } from './pages/Networks'
 import { OverlayPage } from './pages/Overlay'
 import { useSpeedData } from './hooks/useSpeedData'
 
@@ -21,6 +22,7 @@ function Layout(): JSX.Element {
             <Route path="/" element={<Dashboard />} />
             <Route path="/charts" element={<Charts />} />
             <Route path="/history" element={<HistoryPage />} />
+            <Route path="/networks" element={<NetworksPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>

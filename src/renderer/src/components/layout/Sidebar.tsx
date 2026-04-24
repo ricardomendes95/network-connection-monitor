@@ -1,18 +1,26 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, BarChart2, History, Settings } from "lucide-react";
+import {
+  LayoutDashboard,
+  BarChart2,
+  History,
+  Settings,
+  Network,
+} from "lucide-react";
 import { cn } from "../../lib/utils";
 import logo from "../../assets/logo.png";
+import { NetworkSelector } from "./NetworkSelector";
 
 const links = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/charts", label: "Gráficos", icon: BarChart2 },
   { to: "/history", label: "Histórico", icon: History },
+  { to: "/networks", label: "Redes", icon: Network },
   { to: "/settings", label: "Configurações", icon: Settings },
 ];
 
 export function Sidebar(): JSX.Element {
   return (
-    <aside className="w-56 flex-shrink-0 bg-card border-r border-border flex flex-col">
+    <aside className="w-56 flex-shrink-0 bg-card border-r border-border flex flex-col print:hidden">
       <div className="flex items-center gap-2 px-4 py-5 border-b border-border">
         <img
           src={logo}
@@ -20,6 +28,7 @@ export function Sidebar(): JSX.Element {
           className="w-48 h-48 object-contain"
         />
       </div>
+      <NetworkSelector />
       <nav className="flex-1 p-2 space-y-1">
         {links.map(({ to, label, icon: Icon, end }) => (
           <NavLink
