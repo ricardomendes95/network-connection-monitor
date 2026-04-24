@@ -4,7 +4,8 @@ Aplicativo desktop em Electron + React para monitorar velocidade de internet, ar
 
 ## Destaques
 
-- **Menu bar / tray** em todas as plataformas: status atual (online/offline/testando), download, upload, ping, última verificação e botão "Testar agora".
+- **Múltiplas redes cadastradas** — cadastre Casa, Escritório, Café e o que quiser. O app detecta o SSID/perfil Ethernet ativo e troca a rede selecionada automaticamente. Histórico, gráficos e avaliação ANATEL ficam escopados por rede.
+- **Menu bar / tray** em todas as plataformas: status atual (online/offline/testando), download, upload, ping, última verificação, botão "Testar agora" e submenu "Trocar rede".
 - **Testes silenciosos**: os speed tests rodam em background sem roubar foco da tela.
 - **Alertas inteligentes**: notificação dispara apenas em transições `online → offline` ("Sem internet") e `offline → online` ("Internet voltou"). Nada de spam a cada teste.
 - **Intervalos configuráveis** de 1 minuto até 4 horas.
@@ -160,16 +161,39 @@ O ícone na barra de menu (macOS) ou na system tray (Windows/Linux) mostra:
 
 Fechar a janela principal **não** fecha o app. Ele continua rodando em segundo plano monitorando sua conexão.
 
-### Configurações
+### Múltiplas redes
 
-Disponíveis na página *Configurações* da janela principal:
+Se você usa o notebook em mais de um lugar (casa, escritório, co-working), cadastre cada rede para que os relatórios não misturem medições de provedores diferentes.
 
-- **Plano contratado** (de 50 Mbps a 1 Gbps) e **provedor (ISP)** — usados pelo gráfico de instabilidade para calcular a referência ANATEL (40% cabo / 30% WiFi).
-- **Tipo de conexão**: automático, cabeada ou WiFi.
+**Como funciona**:
+
+- O app detecta o SSID da WiFi (ou o nome do perfil Ethernet) e o tipo de conexão ao rodar cada teste.
+- Se a rede detectada **já está cadastrada**, ela vira automaticamente a rede selecionada — todo registro novo é atribuído a ela.
+- Se a rede detectada **não está cadastrada**, aparece um banner azul no Dashboard com o botão "Cadastrar agora". A rede selecionada no dropdown **não muda** — os testes continuam indo para ela até você cadastrar/trocar.
+- Você pode **forçar manualmente** uma rede diferente no dropdown da sidebar (ou no submenu "Trocar rede" do tray). Nesse caso, um banner amarelo avisa que a rede conectada é diferente da selecionada, e os registros vão para a rede que você escolheu.
+
+**Cadastro**: página *Redes* na sidebar, ou atalho "Cadastrar nova rede" no próprio dropdown. Ao criar, o SSID e o tipo de conexão da rede ativa são pré-preenchidos — você só precisa dar um nome amigável (ex. "Casa"), escolher o plano e o provedor.
+
+**Plataformas suportadas** para detecção de rede: macOS, Windows (incluindo WSL) e Linux. No macOS, usa `networksetup` + `ipconfig getsummary`; no Windows, `netsh` e PowerShell; no Linux, `iwgetid`/`nmcli`.
+
+### Configurações globais
+
+Disponíveis na página *Configurações*:
+
 - **Intervalo entre testes**: 1, 2, 3, 5, 10, 15 (recomendado), 20, 30, 45, 60, 120 ou 240 minutos.
-- **Limite para alerta de rede lenta** — usado apenas para marcar o resultado como "slow" no histórico.
 - **Notificações do sistema** — dispara notificações desktop nas transições online/offline.
 - **Iniciar com o sistema** — registra o app para abrir automaticamente (o rótulo adapta-se a Windows / macOS / Linux).
+
+### Configurações por rede
+
+Ficam na página *Redes* — cada rede cadastrada tem:
+
+- **Nome exibível** — rótulo livre ("Casa", "Escritório 5G", etc.).
+- **Identificador técnico (SSID)** — usado para detectar a rede automaticamente. Sugerido com base na rede conectada no momento do cadastro.
+- **Tipo de conexão** — WiFi ou Cabeada.
+- **Provedor (ISP)** — aparece no dossiê de evidências (CSV/PDF ANATEL).
+- **Velocidade contratada** (de 50 Mbps a 1 Gbps) — usada pelo gráfico de instabilidade para calcular a referência ANATEL (40% cabo / 30% WiFi).
+- **Limiar de alerta** — download abaixo desse valor marca o resultado como "slow" e dispara o banner de rede lenta, específico daquela rede.
 
 ## Onde ficam os dados
 

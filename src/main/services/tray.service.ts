@@ -1,6 +1,8 @@
 import { app, BrowserWindow, Menu, nativeImage, Tray } from 'electron'
 import { join } from 'node:path'
 import { getOverlayWindow } from './overlay-toast.service'
+import { activeNetworkService } from './active-network.service'
+import { networksRepo } from '../database/networks.repo'
 
 export type ConnectivityStatus = 'online' | 'offline' | 'unknown'
 
@@ -75,6 +77,33 @@ function handleOpenMain(): void {
   openMainWindow?.()
 }
 
+function buildNetworksSubmenu(): Electron.MenuItemConstructorOptions[] {
+  const networks = networksRepo.list()
+  const active = activeNetworkService.getActive()
+
+  if (networks.length === 0) {
+    return [
+      {
+        label: 'Nenhuma rede cadastrada',
+        enabled: false,
+      },
+      {
+        label: 'Abrir janela para cadastrar',
+        click: () => handleOpenMain(),
+      },
+    ]
+  }
+
+  return networks.map((net) => ({
+    label: `${net.name} (${net.connection_type === 'wifi' ? 'WiFi' : 'Cabo'})`,
+    type: 'radio' as const,
+    checked: active?.id === net.id,
+    click: () => {
+      activeNetworkService.setActive(net.id, { manual: true })
+    },
+  }))
+}
+
 function rebuildMenu(): void {
   if (!tray) return
 
@@ -102,12 +131,23 @@ function rebuildMenu(): void {
     }
   }
 
+  const active = activeNetworkService.getActive()
+  const activeLabel = active
+    ? `Rede: ${active.name}`
+    : 'Rede: não selecionada'
+
   const menu = Menu.buildFromTemplate([
     { label: statusLabel, enabled: false },
     ...extraInfo,
     {
       label: `Última verificação: ${formatClock(state.lastTestedAt)}`,
       enabled: false,
+    },
+    { type: 'separator' },
+    { label: activeLabel, enabled: false },
+    {
+      label: 'Trocar rede',
+      submenu: buildNetworksSubmenu(),
     },
     { type: 'separator' },
     {
@@ -147,6 +187,9 @@ export function createTray(options: {
     tray?.popUpContextMenu()
   })
   rebuildMenu()
+
+  // Rebuild o menu quando a rede ativa ou a lista de redes mudar
+  activeNetworkService.on('change', () => rebuildMenu())
 
   app.on('before-quit', () => {
     tray?.destroy()

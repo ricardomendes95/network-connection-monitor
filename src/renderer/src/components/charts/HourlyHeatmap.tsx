@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react'
 import { ipc } from '../../lib/ipc'
-import { dayName, speedColor, speedColorRelative } from '../../lib/utils'
-import type { HeatmapPoint, Settings } from '../../types'
+import { dayName, speedColorRelative } from '../../lib/utils'
+import type { HeatmapPoint } from '../../types'
+import { useNetworksStore } from '../../store/networksStore'
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
 const DAYS = ['0', '1', '2', '3', '4', '5', '6']
 
 interface Props {
   days?: number
-  settings?: Settings
 }
 
-export function HourlyHeatmap({ days = 7, settings }: Props): JSX.Element {
+export function HourlyHeatmap({ days = 7 }: Props): JSX.Element {
   const [data, setData] = useState<HeatmapPoint[]>([])
+  const active = useNetworksStore((s) => s.active)
 
   useEffect(() => {
     ipc.getChartData('heatmap', days).then((rows) => setData(rows as HeatmapPoint[])).catch(() => {})
@@ -23,8 +24,8 @@ export function HourlyHeatmap({ days = 7, settings }: Props): JSX.Element {
     map.set(`${p.day}-${p.hour}`, p.avg_download)
   }
 
-  const contracted = Number(settings?.contracted_speed_mbps ?? 0)
-  const connType = settings?.connection_type ?? 'auto'
+  const contracted = active?.contracted_speed_mbps ?? 0
+  const connType = active?.connection_type ?? 'auto'
   const isWired = connType === 'wired'
   const hasContracted = contracted > 0
 

@@ -31,11 +31,7 @@ export const useSpeedStore = create<SpeedStore>((set) => ({
   liveNetwork: null,
   settings: {
     interval_minutes: '15',
-    slow_threshold_mbps: '10',
-    notifications_enabled: 'true',
-    contracted_speed_mbps: '100',
-    connection_type: 'auto',
-    isp_name: ''
+    notifications_enabled: 'true'
   },
 
   addResult: (result) =>

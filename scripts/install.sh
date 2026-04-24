@@ -34,7 +34,12 @@ warn() { printf '\033[1;33m[warn]\033[0m %s\n' "$*" >&2; }
 err() { printf '\033[1;31m[erro]\033[0m %s\n' "$*" >&2; }
 
 PLATFORM="$(uname -s)"
-APP_NAME="Conexão Flow"
+# Nome do bundle em disco (ASCII). O nome exibido ao usuario e "Conexão Flow"
+# via CFBundleDisplayName no Info.plist. O ASCII evita um bug do
+# electron-builder 26.x + Electron 40 que corrompe o binario Mach-O quando o
+# productName contem caracteres nao-ASCII (NFD/UTF-8), causando SIGTRAP no
+# arranque do V8 no macOS 26+.
+APP_NAME="Conexao Flow"
 APP_ID="com.ricardo.network-connection"
 
 uninstall_macos() {
@@ -141,11 +146,17 @@ case "$PLATFORM" in
     log "Copiando ${CANDIDATE} -> /Applications/"
     rm -rf "/Applications/${APP_NAME}.app"
     cp -R "$CANDIDATE" "/Applications/"
-    # Remove quarantine para o app abrir sem aviso de notarizacao quebrada
-    xattr -dr com.apple.quarantine "/Applications/${APP_NAME}.app" 2>/dev/null || true
-    log "App instalado em /Applications/${APP_NAME}.app"
+    INSTALLED="/Applications/${APP_NAME}.app"
+    # Remove todos os atributos estendidos (quarantine, provenance, etc).
+    # O macOS 14+ usa `com.apple.provenance` que pode bloquear o open(1).
+    xattr -cr "$INSTALLED" 2>/dev/null || true
+    # electron-builder ja assina ad-hoc todos os bundles aninhados em tempo de
+    # empacotamento (verificavel com: codesign --verify --deep --strict). Nao
+    # re-assinar aqui — `codesign --deep` e depreciado pela Apple e pode quebrar
+    # assinaturas aninhadas em Electron helpers.
+    log "App instalado em ${INSTALLED}"
     log "Abrindo o app..."
-    open "/Applications/${APP_NAME}.app" || true
+    open "$INSTALLED" || true
     ;;
   Linux)
     log "Artefatos disponiveis em dist/:"

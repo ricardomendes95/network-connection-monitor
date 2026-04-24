@@ -7,7 +7,7 @@ import { DailyBarChart } from '../components/charts/DailyBarChart'
 import { WeeklyLineChart } from '../components/charts/WeeklyLineChart'
 import { InstabilityReport } from '../components/charts/InstabilityReport'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
-import { useSettings } from '../hooks/useSettings'
+import { useNetworksStore } from '../store/networksStore'
 import { ipc } from '../lib/ipc'
 import { FileText, Image, Loader2 } from 'lucide-react'
 
@@ -19,7 +19,7 @@ const PERIOD_OPTIONS = [
 
 export function Charts(): JSX.Element {
   const [days, setDays] = useState('7')
-  const { settings } = useSettings()
+  const active = useNetworksStore((s) => s.active)
   const [exporting, setExporting] = useState<'pdf' | 'png' | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -67,12 +67,19 @@ export function Charts(): JSX.Element {
     }
   }
 
+  const scopeLabel = active
+    ? `Rede: ${active.name}`
+    : 'Nenhuma rede selecionada'
+  const contracted = active?.contracted_speed_mbps ?? 0
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="text-xl font-semibold">Gráficos</h1>
-          <p className="text-sm text-muted-foreground">Análise de oscilações e horários de lentidão</p>
+          <p className="text-sm text-muted-foreground">
+            Análise de oscilações e horários de lentidão · {scopeLabel}
+          </p>
         </div>
         <div className="flex items-center gap-2 print:hidden">
           <Select value={days} onValueChange={setDays}>
@@ -133,13 +140,13 @@ export function Charts(): JSX.Element {
             <CardTitle className="text-sm font-medium">Mapa de Calor — Hora × Dia da Semana</CardTitle>
             <CardDescription className="text-xs">
               Identifica os horários de maior lentidão.
-              {Number(settings.contracted_speed_mbps) > 0
-                ? ` Cores relativas ao plano de ${settings.contracted_speed_mbps} Mbps (ANATEL).`
-                : ' Configure a velocidade contratada para ver cores relativas ao plano.'}
+              {contracted > 0
+                ? ` Cores relativas ao plano de ${contracted} Mbps (ANATEL).`
+                : ' Configure a velocidade contratada da rede para ver cores relativas ao plano.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <HourlyHeatmap days={Number(days)} settings={settings} />
+            <HourlyHeatmap days={Number(days)} />
           </CardContent>
         </Card>
 
@@ -153,7 +160,7 @@ export function Charts(): JSX.Element {
           </CardContent>
         </Card>
 
-        <InstabilityReport days={Number(days)} settings={settings} />
+        <InstabilityReport days={Number(days)} />
       </div>
     </div>
   )

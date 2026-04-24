@@ -3,6 +3,8 @@ import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { AlertBanner } from '../components/dashboard/AlertBanner'
 import { TestErrorBanner } from '../components/dashboard/TestErrorBanner'
+import { NetworkMismatchBanner } from '../components/dashboard/NetworkMismatchBanner'
+import { UncataloguedNetworkBanner } from '../components/dashboard/UncataloguedNetworkBanner'
 import { CurrentStatus } from '../components/dashboard/CurrentStatus'
 import { SpeedGauge } from '../components/dashboard/SpeedGauge'
 import { NetworkEvaluation } from '../components/dashboard/NetworkEvaluation'
@@ -39,6 +41,8 @@ export function Dashboard(): JSX.Element {
         </Button>
       </div>
 
+      <NetworkMismatchBanner />
+      <UncataloguedNetworkBanner />
       <AlertBanner />
       <TestErrorBanner />
 

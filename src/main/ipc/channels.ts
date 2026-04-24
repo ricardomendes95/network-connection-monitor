@@ -9,6 +9,15 @@ export const IPC_CHANNELS = {
   GET_NETWORK_INFO: 'network:get-info',
   NETWORK_INFO_UPDATE: 'network:info-update',
 
+  NETWORKS_LIST: 'networks:list',
+  NETWORKS_CREATE: 'networks:create',
+  NETWORKS_UPDATE: 'networks:update',
+  NETWORKS_DELETE: 'networks:delete',
+  NETWORKS_GET_ACTIVE: 'networks:get-active',
+  NETWORKS_SET_ACTIVE: 'networks:set-active',
+  NETWORKS_SUGGEST_FROM_LIVE: 'networks:suggest-from-live',
+  ACTIVE_NETWORK_CHANGED: 'networks:active-changed',
+
   TEST_STARTED: 'speed:test-started',
   TEST_COMPLETED: 'speed:test-completed',
   TEST_FAILED: 'speed:test-failed',

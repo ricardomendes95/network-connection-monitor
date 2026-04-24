@@ -6,6 +6,7 @@ import {
   showInternetRestoredNotification,
 } from "./notification.service";
 import { getNetworkInfo } from "./network-info.service";
+import { activeNetworkService } from "./active-network.service";
 import { IPC_CHANNELS } from "../ipc/channels";
 import { writeMainLog } from "../utils/logger";
 import {
@@ -20,19 +21,11 @@ export class SchedulerService {
   private tickTimer: NodeJS.Timeout | null = null;
   private isRunning = false;
   private intervalMs: number;
-  private thresholdMbps: number;
-  private connectionTypeOverride: string;
   private nextTestAt: number = 0;
   private lastConnectivity: ConnectivityStatus = "unknown";
 
-  constructor(
-    intervalMinutes: number,
-    thresholdMbps: number,
-    connectionType = "auto",
-  ) {
+  constructor(intervalMinutes: number) {
     this.intervalMs = intervalMinutes * 60 * 1000;
-    this.thresholdMbps = thresholdMbps;
-    this.connectionTypeOverride = connectionType;
   }
 
   start(): void {
@@ -52,14 +45,6 @@ export class SchedulerService {
     this.intervalMs = minutes * 60 * 1000;
     this.stop();
     this.start();
-  }
-
-  updateThreshold(mbps: number): void {
-    this.thresholdMbps = mbps;
-  }
-
-  updateConnectionType(type: string): void {
-    this.connectionTypeOverride = type;
   }
 
   runNow(): void {
@@ -98,29 +83,22 @@ export class SchedulerService {
         getNetworkInfo(),
       ]);
 
-      const db = getDb();
-      const isSlow = result.download < this.thresholdMbps ? 1 : 0;
+      activeNetworkService.reconcile(netInfo);
+      const active = activeNetworkService.getActive();
+      const threshold = active?.slow_threshold_mbps ?? 10;
+      const isSlow = result.download < threshold ? 1 : 0;
 
-      const resolvedType =
-        this.connectionTypeOverride === "auto"
-          ? netInfo.connectionType
-          : this.connectionTypeOverride;
-
-      const userIsp = (
-        db
-          .prepare("SELECT value FROM settings WHERE key = 'isp_name'")
-          .get() as { value: string } | undefined
-      )?.value;
       const ispName =
-        userIsp && userIsp.trim() !== "" ? userIsp : netInfo.ispName;
+        active && active.isp_name.trim() !== "" ? active.isp_name : netInfo.ispName;
 
+      const db = getDb();
       db.prepare(
         `
         INSERT INTO speed_results
           (tested_at, download, upload, ping, jitter, server_host, is_slow,
            network_name, isp_name, connection_type,
-           packet_loss, result_url, server_name)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           packet_loss, result_url, server_name, network_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       ).run(
         result.testedAt,
@@ -132,10 +110,11 @@ export class SchedulerService {
         isSlow,
         netInfo.networkName,
         ispName,
-        resolvedType,
+        netInfo.connectionType,
         result.packetLoss,
         result.resultUrl,
         result.serverName,
+        active?.id ?? null,
       );
 
       const saved = db

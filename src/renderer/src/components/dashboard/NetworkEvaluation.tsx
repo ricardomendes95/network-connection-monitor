@@ -1,6 +1,7 @@
 import { Wifi, Cable, Info, Signal } from 'lucide-react'
 import { Card, CardContent } from '../ui/card'
 import { useSpeedStore } from '../../store/speedStore'
+import { useNetworksStore } from '../../store/networksStore'
 import { evaluateSpeed } from '../../lib/utils'
 
 const COLOR_CLASSES: Record<string, { bg: string; text: string; bar: string }> = {
@@ -11,15 +12,16 @@ const COLOR_CLASSES: Record<string, { bg: string; text: string; bar: string }> =
 }
 
 export function NetworkEvaluation(): JSX.Element {
-  const { lastResult, settings, liveNetwork } = useSpeedStore()
+  const { lastResult, liveNetwork } = useSpeedStore()
+  const active = useNetworksStore((s) => s.active)
 
   // liveNetwork tem prioridade: é detectado ao vivo no startup e a cada teste
   // Garante que o tipo correto (WiFi/Cabo) é mostrado mesmo sem resultado armazenado
-  const connType = liveNetwork?.connectionType ?? lastResult?.connection_type ?? 'wired'
+  const connType = liveNetwork?.connectionType ?? lastResult?.connection_type ?? active?.connection_type ?? 'wired'
   const networkName = liveNetwork?.networkName ?? lastResult?.network_name ?? null
-  const ispName = liveNetwork?.ispName || lastResult?.isp_name || null
+  const ispName = active?.isp_name || liveNetwork?.ispName || lastResult?.isp_name || null
 
-  const contracted = Number(settings.contracted_speed_mbps ?? 0)
+  const contracted = active?.contracted_speed_mbps ?? 0
   const evaluation = lastResult
     ? evaluateSpeed(lastResult.download, contracted, connType)
     : null
@@ -40,7 +42,15 @@ export function NetworkEvaluation(): JSX.Element {
             <span className="text-xs font-medium">{isWifi ? 'WiFi' : 'Cabeada'}</span>
           </div>
 
-          {isWifi && networkName && networkName !== 'Desconhecido' && (
+          {active && (
+            <div className="flex items-center gap-1 bg-primary/10 border border-primary/30 rounded-md px-2 py-1">
+              <span className="text-xs font-medium text-primary" title={active.ssid}>
+                {active.name}
+              </span>
+            </div>
+          )}
+
+          {isWifi && networkName && networkName !== 'Desconhecido' && networkName !== active?.ssid && (
             <div className="flex items-center gap-1 bg-muted/60 rounded-md px-2 py-1">
               <Signal className="w-3 h-3 text-blue-400" />
               <span className="text-xs font-medium" title={networkName}>
@@ -49,7 +59,7 @@ export function NetworkEvaluation(): JSX.Element {
             </div>
           )}
 
-          {!isWifi && networkName && networkName !== 'Desconhecido' && networkName !== 'Ethernet' && (
+          {!isWifi && networkName && networkName !== 'Desconhecido' && networkName !== 'Ethernet' && networkName !== active?.ssid && (
             <span className="text-xs text-muted-foreground">{networkName}</span>
           )}
 

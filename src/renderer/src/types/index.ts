@@ -13,21 +13,68 @@ export interface SpeedResult {
   connection_type: 'wifi' | 'wired' | null
   packet_loss: number | null
   result_url: string | null
+  network_id: number | null
 }
 
 export interface Settings {
   interval_minutes: string
-  slow_threshold_mbps: string
   notifications_enabled: string
-  contracted_speed_mbps: string
-  connection_type: string
-  isp_name: string
+  active_network_id?: string
+  active_network_manual_override?: string
+  // Chaves legadas, ainda presentes no banco por retrocompatibilidade — não use
+  slow_threshold_mbps?: string
+  contracted_speed_mbps?: string
+  connection_type?: string
+  isp_name?: string
 }
 
 export interface LiveNetworkInfo {
   networkName: string
   ispName: string
   connectionType: 'wifi' | 'wired'
+}
+
+export interface Network {
+  id: number
+  name: string
+  ssid: string
+  connection_type: 'wifi' | 'wired'
+  isp_name: string
+  contracted_speed_mbps: number
+  slow_threshold_mbps: number
+  created_at: string
+  updated_at: string
+}
+
+export interface NetworkCreateInput {
+  name: string
+  ssid: string
+  connection_type: 'wifi' | 'wired'
+  isp_name?: string
+  contracted_speed_mbps?: number
+  slow_threshold_mbps?: number
+}
+
+export type NetworkUpdateInput = Partial<NetworkCreateInput>
+
+export type LiveMatchStatus = 'match' | 'mismatch' | 'uncatalogued' | 'unknown'
+
+export interface ActiveNetworkState {
+  active: Network | null
+  live: LiveNetworkInfo | null
+  liveMatch: LiveMatchStatus
+  manualOverride: boolean
+}
+
+export interface NetworkSuggestion {
+  live: LiveNetworkInfo
+  alreadyRegistered: boolean
+  suggestion: {
+    name: string
+    ssid: string
+    connection_type: 'wifi' | 'wired'
+    isp_name: string
+  }
 }
 
 export interface SpeedEvaluation {

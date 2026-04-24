@@ -10,11 +10,12 @@ import {
   ReferenceLine
 } from 'recharts'
 import { useSpeedStore } from '../../store/speedStore'
+import { useNetworksStore } from '../../store/networksStore'
 import { formatTime } from '../../lib/utils'
 
 export function SpeedLineChart(): JSX.Element {
-  const { results, settings } = useSpeedStore()
-  const threshold = Number(settings.slow_threshold_mbps)
+  const { results } = useSpeedStore()
+  const threshold = useNetworksStore((s) => s.active?.slow_threshold_mbps ?? 10)
 
   const data = [...results]
     .reverse()
