@@ -314,7 +314,7 @@ export function InstabilityReport({ days }: Props): JSX.Element {
             hour: '2-digit',
             minute: '2-digit'
           })}{' '}
-          · Network Connection Monitor
+          · Caiu aí?
         </p>
       </CardContent>
     </Card>

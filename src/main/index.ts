@@ -58,7 +58,7 @@ function createWindow(): BrowserWindow {
     minWidth: 900,
     minHeight: 600,
     show: true,
-    title: "Conexão Flow",
+    title: "Caiu aí?",
     autoHideMenuBar: true,
     backgroundColor: "#101418",
     icon: getIconPath(),

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Instala ou reinstala o Conexão Flow nesta maquina.
+# Instala ou reinstala o Caiu aí? nesta maquina.
 #
 # Uso:
 #   ./scripts/install.sh              # instala/reinstala (padrao)
@@ -34,12 +34,12 @@ warn() { printf '\033[1;33m[warn]\033[0m %s\n' "$*" >&2; }
 err() { printf '\033[1;31m[erro]\033[0m %s\n' "$*" >&2; }
 
 PLATFORM="$(uname -s)"
-# Nome do bundle em disco (ASCII). O nome exibido ao usuario e "Conexão Flow"
+# Nome do bundle em disco (ASCII). O nome exibido ao usuario e "Caiu aí?"
 # via CFBundleDisplayName no Info.plist. O ASCII evita um bug do
 # electron-builder 26.x + Electron 40 que corrompe o binario Mach-O quando o
 # productName contem caracteres nao-ASCII (NFD/UTF-8), causando SIGTRAP no
 # arranque do V8 no macOS 26+.
-APP_NAME="Conexao Flow"
+APP_NAME="Caiu ai"
 APP_ID="com.ricardo.network-connection"
 
 uninstall_macos() {

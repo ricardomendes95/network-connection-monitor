@@ -1,4 +1,4 @@
-# Instala ou reinstala o Conexão Flow no Windows.
+# Instala ou reinstala o Caiu aí? no Windows.
 #
 # Uso:
 #   powershell -ExecutionPolicy Bypass -File scripts/install.ps1
@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 $RepoDir = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $RepoDir
 
-$AppName = "Conexão Flow"
+$AppName = "Caiu ai"
 $ProductDir = Join-Path $env:LOCALAPPDATA "Programs\network-connection"
 $SupportDir = Join-Path $env:APPDATA "network-connection"
 

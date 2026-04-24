@@ -1050,7 +1050,7 @@ tr{page-break-inside:avoid}
 <div class="header">
   <div>
     <h1>⚠ Dossiê de Evidências</h1>
-    <div class="sub">Violações de Contrato de Internet · Conexão Flow</div>
+    <div class="sub">Violações de Contrato de Internet · Caiu aí?</div>
   </div>
   <div class="header-right">
     <div class="isp">${h(ispName)}</div>
@@ -1131,7 +1131,7 @@ tr{page-break-inside:avoid}
 </table>
 
 <div class="footer">
-  <span>Conexão Flow · ${h(now.toLocaleString("pt-BR"))}</span>
+  <span>Caiu aí? · ${h(now.toLocaleString("pt-BR"))}</span>
   <span>Documento para reclamações na ANATEL (anatel.gov.br/consumidor) e PROCON</span>
 </div>
 

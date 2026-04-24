@@ -1,4 +1,4 @@
-# Network Connection Monitor — Contexto do Projeto
+# Caiu aí? — Contexto do Projeto
 
 ## Objetivo
 App desktop (Electron + React) que monitora automaticamente a velocidade da internet, salva histórico em SQLite e alerta o usuário quando a conexão estiver lenta.
