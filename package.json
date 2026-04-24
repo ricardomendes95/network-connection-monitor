@@ -10,11 +10,13 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "dist": "npm run build && electron-builder",
+    "clean": "rm -rf dist out node_modules/.cache",
+    "rebuild:native": "electron-rebuild -f -w better-sqlite3",
+    "dist": "npm run clean && npm run build && npm run rebuild:native && electron-builder",
     "predist:win": "node scripts/assert-win-build-host.cjs",
-    "dist:win": "npm run build && electron-builder --win",
-    "rebuild": "electron-rebuild -f -w better-sqlite3,lzma-native",
-    "postinstall": "electron-rebuild -f -w better-sqlite3,lzma-native",
+    "dist:win": "npm run build && npm run rebuild:native && electron-builder --win",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
     "rebuild:sqlite": "electron-rebuild -f -w better-sqlite3",
     "app:install": "bash scripts/install.sh",
     "app:install:no-build": "bash scripts/install.sh --no-build",
@@ -31,7 +33,7 @@
     "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-switch": "^1.1.0",
     "@radix-ui/react-toast": "^1.2.2",
-    "better-sqlite3": "^11.10.0",
+    "better-sqlite3": "^12.9.0",
     "call-bind-apply-helpers": "^1.0.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
@@ -45,15 +47,15 @@
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^1.0.1",
-    "@electron/rebuild": "^3.6.0",
+    "@electron/rebuild": "^4.0.4",
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^20.16.10",
     "@types/react": "^18.3.10",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",
-    "electron": "^32.1.2",
-    "electron-builder": "^25.0.5",
+    "electron": "40.9.2",
+    "electron-builder": "^26.9.0",
     "electron-vite": "^2.3.0",
     "postcss": "^8.4.47",
     "react": "^18.3.1",
@@ -71,15 +73,20 @@
   },
   "build": {
     "appId": "com.ricardo.network-connection",
-    "productName": "Conexão Flow",
+    "productName": "Conexao Flow",
     "asar": true,
+    "buildDependenciesFromSource": true,
     "asarUnpack": [
-      "node_modules/better-sqlite3/**/*",
-      "node_modules/lzma-native/**/*"
+      "node_modules/better-sqlite3/**/*"
     ],
     "publish": null,
     "directories": {
       "output": "dist"
+    },
+    "mac": {
+      "extendInfo": {
+        "CFBundleDisplayName": "Conexão Flow"
+      }
     },
     "linux": {
       "target": [
