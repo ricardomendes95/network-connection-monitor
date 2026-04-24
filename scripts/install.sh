@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Instala ou reinstala o Conexão Flow nesta maquina.
+# Instala ou reinstala o Caiu aí nesta maquina.
 #
 # Uso:
 #   ./scripts/install.sh              # instala/reinstala (padrao)
@@ -34,7 +34,7 @@ warn() { printf '\033[1;33m[warn]\033[0m %s\n' "$*" >&2; }
 err() { printf '\033[1;31m[erro]\033[0m %s\n' "$*" >&2; }
 
 PLATFORM="$(uname -s)"
-APP_NAME="Conexão Flow"
+APP_NAME="Caiu aí"
 APP_ID="com.ricardo.network-connection"
 
 uninstall_macos() {

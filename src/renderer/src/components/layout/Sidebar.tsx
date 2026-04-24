@@ -16,7 +16,7 @@ export function Sidebar(): JSX.Element {
       <div className="flex items-center gap-2 px-4 py-5 border-b border-border">
         <img
           src={logo}
-          alt="Conexão Flow"
+          alt="Caiu aí?"
           className="w-48 h-48 object-contain"
         />
       </div>

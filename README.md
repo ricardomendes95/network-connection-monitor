@@ -1,4 +1,4 @@
-# Conexão Flow
+# Caiu aí?
 
 Aplicativo desktop em Electron + React para monitorar velocidade de internet, armazenar histórico em SQLite e alertar em transições de conectividade (online/offline). Funciona como menu bar app — o teste roda silenciosamente em segundo plano.
 

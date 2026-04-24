@@ -313,7 +313,7 @@ export function InstabilityReport({ days, settings }: Props): JSX.Element {
             hour: '2-digit',
             minute: '2-digit'
           })}{' '}
-          · Network Connection Monitor
+          · Caiu aí?
         </p>
       </CardContent>
     </Card>

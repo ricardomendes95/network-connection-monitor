@@ -71,7 +71,7 @@
   },
   "build": {
     "appId": "com.ricardo.network-connection",
-    "productName": "Conexão Flow",
+    "productName": "Caiu aí",
     "asar": false,
     "publish": null,
     "directories": {
