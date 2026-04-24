@@ -72,7 +72,11 @@
   "build": {
     "appId": "com.ricardo.network-connection",
     "productName": "Conexão Flow",
-    "asar": false,
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*",
+      "node_modules/lzma-native/**/*"
+    ],
     "publish": null,
     "directories": {
       "output": "dist"

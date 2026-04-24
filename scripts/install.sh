@@ -141,11 +141,21 @@ case "$PLATFORM" in
     log "Copiando ${CANDIDATE} -> /Applications/"
     rm -rf "/Applications/${APP_NAME}.app"
     cp -R "$CANDIDATE" "/Applications/"
-    # Remove quarantine para o app abrir sem aviso de notarizacao quebrada
-    xattr -dr com.apple.quarantine "/Applications/${APP_NAME}.app" 2>/dev/null || true
-    log "App instalado em /Applications/${APP_NAME}.app"
+    INSTALLED="/Applications/${APP_NAME}.app"
+    # Remove todos os atributos estendidos (quarantine, provenance, etc).
+    # O macOS 14+ usa `com.apple.provenance` que invalida a assinatura ad-hoc.
+    xattr -cr "$INSTALLED" 2>/dev/null || true
+    # Re-assinar ad-hoc profundamente. Sem isso o bundle copiado fica com a
+    # assinatura linker-signed original do Electron que nao cobre os recursos
+    # do projeto — no macOS 14+ o hardened runtime mata o processo na
+    # inicializacao do V8 (SIGTRAP / brk 0).
+    log "Re-assinando ad-hoc o bundle"
+    if ! codesign --force --deep --sign - "$INSTALLED" 2>&1 | tail -3; then
+      warn "Falha no re-sign ad-hoc — o app pode nao abrir em macOS recente"
+    fi
+    log "App instalado em ${INSTALLED}"
     log "Abrindo o app..."
-    open "/Applications/${APP_NAME}.app" || true
+    open "$INSTALLED" || true
     ;;
   Linux)
     log "Artefatos disponiveis em dist/:"
