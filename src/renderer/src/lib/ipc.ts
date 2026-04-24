@@ -23,31 +23,31 @@ declare global {
         limit?: number
         networkId?: number | null
       }) => Promise<HistoryResponse>
-      getChartData: (
+      getChartData(
         type: 'heatmap',
         days?: number,
         options?: { contracted_mbps?: number; connection_type?: string; networkId?: number | null }
-      ) => Promise<HeatmapPoint[]>
-      getChartData: (
+      ): Promise<HeatmapPoint[]>
+      getChartData(
         type: 'daily',
         days?: number,
         options?: { contracted_mbps?: number; connection_type?: string; networkId?: number | null }
-      ) => Promise<DailyPoint[]>
-      getChartData: (
+      ): Promise<DailyPoint[]>
+      getChartData(
         type: 'weekly',
         days?: number,
         options?: { contracted_mbps?: number; connection_type?: string; networkId?: number | null }
-      ) => Promise<WeeklyPoint[]>
-      getChartData: (
+      ): Promise<WeeklyPoint[]>
+      getChartData(
         type: 'timeline',
         days?: number,
         options?: { contracted_mbps?: number; connection_type?: string; networkId?: number | null }
-      ) => Promise<SpeedResult[]>
-      getChartData: (
+      ): Promise<SpeedResult[]>
+      getChartData(
         type: 'instability',
         days?: number,
         options?: { contracted_mbps?: number; connection_type?: string; networkId?: number | null }
-      ) => Promise<unknown>
+      ): Promise<unknown>
       runTestNow: () => Promise<{ queued: boolean }>
       getSettings: () => Promise<Settings>
       setSettings: (settings: Partial<Settings>) => Promise<{ ok: boolean }>
