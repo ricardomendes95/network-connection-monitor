@@ -13,7 +13,7 @@ import {
 import { ipc } from '../../lib/ipc'
 import { dayName } from '../../lib/utils'
 import type { DailyPoint } from '../../types'
-import { useSpeedStore } from '../../store/speedStore'
+import { useNetworksStore } from '../../store/networksStore'
 
 interface Props {
   days?: number
@@ -21,7 +21,7 @@ interface Props {
 
 export function DailyBarChart({ days = 30 }: Props): JSX.Element {
   const [data, setData] = useState<DailyPoint[]>([])
-  const threshold = Number(useSpeedStore.getState().settings.slow_threshold_mbps)
+  const threshold = useNetworksStore((s) => s.active?.slow_threshold_mbps ?? 10)
 
   useEffect(() => {
     ipc.getChartData('daily', days).then((rows) => setData(rows as DailyPoint[])).catch(() => {})

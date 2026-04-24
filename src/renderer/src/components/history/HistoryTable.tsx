@@ -2,7 +2,7 @@ import { Wifi, Cable } from 'lucide-react'
 import { Badge } from '../ui/badge'
 import { formatMbps, formatMs, formatDateTime, evaluateSpeed } from '../../lib/utils'
 import type { SpeedResult } from '../../types'
-import { useSpeedStore } from '../../store/speedStore'
+import { useNetworksStore } from '../../store/networksStore'
 
 interface Props {
   results: SpeedResult[]
@@ -16,8 +16,8 @@ const EVAL_BADGE: Record<string, { variant: 'success' | 'warning' | 'destructive
 }
 
 export function HistoryTable({ results }: Props): JSX.Element {
-  const { settings } = useSpeedStore()
-  const contracted = Number(settings.contracted_speed_mbps ?? 0)
+  const active = useNetworksStore((s) => s.active)
+  const contracted = active?.contracted_speed_mbps ?? 0
 
   if (results.length === 0) {
     return (

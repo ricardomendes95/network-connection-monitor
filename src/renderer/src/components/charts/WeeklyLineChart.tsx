@@ -11,7 +11,7 @@ import {
   ReferenceLine
 } from 'recharts'
 import { ipc } from '../../lib/ipc'
-import { useSpeedStore } from '../../store/speedStore'
+import { useNetworksStore } from '../../store/networksStore'
 import type { WeeklyPoint } from '../../types'
 
 interface Props {
@@ -20,7 +20,7 @@ interface Props {
 
 export function WeeklyLineChart({ days = 7 }: Props): JSX.Element {
   const [data, setData] = useState<WeeklyPoint[]>([])
-  const threshold = Number(useSpeedStore.getState().settings.slow_threshold_mbps)
+  const threshold = useNetworksStore((s) => s.active?.slow_threshold_mbps ?? 10)
 
   useEffect(() => {
     ipc.getChartData('weekly', days).then((rows) => setData(rows as WeeklyPoint[])).catch(() => {})

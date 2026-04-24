@@ -4,6 +4,7 @@ import { Button } from '../components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
 import { HistoryTable } from '../components/history/HistoryTable'
 import { ipc } from '../lib/ipc'
+import { useNetworksStore } from '../store/networksStore'
 import type { SpeedResult } from '../types'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -15,6 +16,7 @@ export function HistoryPage(): JSX.Element {
   const [page, setPage] = useState(1)
   const [days, setDays] = useState('7')
   const [isLoading, setIsLoading] = useState(false)
+  const active = useNetworksStore((s) => s.active)
 
   const totalPages = Math.ceil(total / LIMIT)
 
@@ -32,7 +34,7 @@ export function HistoryPage(): JSX.Element {
       })
       .catch(() => {})
       .finally(() => setIsLoading(false))
-  }, [days, page])
+  }, [days, page, active?.id])
 
   return (
     <div className="space-y-4">
@@ -41,6 +43,7 @@ export function HistoryPage(): JSX.Element {
           <h1 className="text-xl font-semibold">Histórico</h1>
           <p className="text-sm text-muted-foreground">
             {total} resultado{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}
+            {active ? ` · Rede: ${active.name}` : ''}
           </p>
         </div>
         <Select value={days} onValueChange={setDays}>

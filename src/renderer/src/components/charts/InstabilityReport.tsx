@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { ipc } from '../../lib/ipc'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card'
-import type { InstabilityData, DailyHourSlot, DailyInterval, Settings } from '../../types'
+import type { InstabilityData, DailyHourSlot, DailyInterval } from '../../types'
 import { AlertTriangle, Cable, Wifi, CheckCircle2, FileDown, FileText } from 'lucide-react'
+import { useNetworksStore } from '../../store/networksStore'
 
 interface Props {
   days: number
-  settings: Settings
 }
 
 // Retorna o intervalo onde a lentidão foi mais concentrada no dia.
@@ -102,14 +102,15 @@ function connIcon(type: string | null): JSX.Element {
   return <Cable className="w-3.5 h-3.5" />
 }
 
-export function InstabilityReport({ days, settings }: Props): JSX.Element {
+export function InstabilityReport({ days }: Props): JSX.Element {
   const [data, setData] = useState<InstabilityData | null>(null)
   const [exporting, setExporting] = useState(false)
   const [exportingPdf, setExportingPdf] = useState(false)
+  const active = useNetworksStore((s) => s.active)
 
-  const contracted = Number(settings.contracted_speed_mbps ?? 0)
-  const connType = settings.connection_type ?? 'auto'
-  const ispName = settings.isp_name || 'Provedor'
+  const contracted = active?.contracted_speed_mbps ?? 0
+  const connType = active?.connection_type ?? 'auto'
+  const ispName = active?.isp_name || 'Provedor'
 
   const evidenceOpts = {
     contracted_mbps: contracted > 0 ? contracted : undefined,
