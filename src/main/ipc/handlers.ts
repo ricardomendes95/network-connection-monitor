@@ -6,26 +6,59 @@ import { getDb } from "../database/connection";
 import { IPC_CHANNELS } from "./channels";
 import { getNetworkInfo } from "../services/network-info.service";
 import type { SchedulerService } from "../services/scheduler.service";
+import { networksRepo } from "../database/networks.repo";
+import { activeNetworkService } from "../services/active-network.service";
+import { toUserFacingError } from "../utils/error-mapper";
+
+// Chaves que passaram a ser armazenadas em `networks`. Defendemos settings:set
+// contra clientes antigos que ainda enviam essas chaves.
+const LEGACY_NETWORK_KEYS = new Set([
+  "isp_name",
+  "contracted_speed_mbps",
+  "slow_threshold_mbps",
+  "connection_type",
+]);
+
+function resolveScopeNetworkId(explicit?: number | null): number | null {
+  if (typeof explicit === "number" && Number.isFinite(explicit)) return explicit;
+  const active = activeNetworkService.getActive();
+  return active ? active.id : null;
+}
 
 export function registerHandlers(scheduler: SchedulerService): void {
   ipcMain.handle(
     IPC_CHANNELS.GET_HISTORY,
-    (_event, filter: { days?: number; page?: number; limit?: number } = {}) => {
+    (
+      _event,
+      filter: {
+        days?: number;
+        page?: number;
+        limit?: number;
+        networkId?: number | null;
+      } = {},
+    ) => {
       const db = getDb();
       const days = filter.days ?? 7;
       const limit = filter.limit ?? 50;
       const offset = ((filter.page ?? 1) - 1) * limit;
+      const networkId = resolveScopeNetworkId(filter.networkId);
+
+      const whereNet = networkId !== null ? "AND network_id = ?" : "";
+      const params =
+        networkId !== null ? [days, networkId, limit, offset] : [days, limit, offset];
+      const countParams = networkId !== null ? [days, networkId] : [days];
 
       const rows = db
         .prepare(
           `
       SELECT * FROM speed_results
       WHERE tested_at >= datetime('now', '-' || ? || ' days')
+        ${whereNet}
       ORDER BY tested_at DESC
       LIMIT ? OFFSET ?
     `,
         )
-        .all(days, limit, offset);
+        .all(...params);
 
       const total = (
         db
@@ -33,9 +66,10 @@ export function registerHandlers(scheduler: SchedulerService): void {
             `
       SELECT COUNT(*) as count FROM speed_results
       WHERE tested_at >= datetime('now', '-' || ? || ' days')
+        ${whereNet}
     `,
           )
-          .get(days) as { count: number }
+          .get(...countParams) as { count: number }
       ).count;
 
       return { rows, total, page: filter.page ?? 1, limit };
@@ -48,9 +82,16 @@ export function registerHandlers(scheduler: SchedulerService): void {
       _event,
       type: "heatmap" | "daily" | "timeline" | "weekly" | "instability",
       days = 7,
-      options?: { contracted_mbps?: number; connection_type?: string },
+      options?: {
+        contracted_mbps?: number;
+        connection_type?: string;
+        networkId?: number | null;
+      },
     ) => {
       const db = getDb();
+      const networkId = resolveScopeNetworkId(options?.networkId);
+      const whereNet = networkId !== null ? "AND network_id = ?" : "";
+      const scopeParams = networkId !== null ? [networkId] : [];
 
       if (type === "heatmap") {
         return db
@@ -63,11 +104,12 @@ export function registerHandlers(scheduler: SchedulerService): void {
                COUNT(*) AS total
         FROM speed_results
         WHERE tested_at >= datetime('now', '-' || ? || ' days')
+          ${whereNet}
         GROUP BY day, hour
         ORDER BY day, hour
       `,
           )
-          .all(days);
+          .all(days, ...scopeParams);
       }
 
       if (type === "daily") {
@@ -82,11 +124,12 @@ export function registerHandlers(scheduler: SchedulerService): void {
                COUNT(CASE WHEN is_slow=1 THEN 1 END) AS slow_count
         FROM speed_results
         WHERE tested_at >= datetime('now', '-' || ? || ' days')
+          ${whereNet}
         GROUP BY day_of_week
         ORDER BY day_of_week
       `,
           )
-          .all(days);
+          .all(days, ...scopeParams);
       }
 
       if (type === "timeline") {
@@ -96,10 +139,11 @@ export function registerHandlers(scheduler: SchedulerService): void {
         SELECT tested_at, download, upload, ping, is_slow
         FROM speed_results
         WHERE date(tested_at) = date('now')
+          ${whereNet}
         ORDER BY tested_at ASC
       `,
           )
-          .all();
+          .all(...scopeParams);
       }
 
       if (type === "weekly") {
@@ -113,35 +157,31 @@ export function registerHandlers(scheduler: SchedulerService): void {
                COUNT(CASE WHEN is_slow=1 THEN 1 END) AS slow_count
         FROM speed_results
         WHERE tested_at >= datetime('now', '-' || ? || ' days')
+          ${whereNet}
         GROUP BY day
         ORDER BY day ASC
       `,
           )
-          .all(days);
+          .all(days, ...scopeParams);
       }
 
       if (type === "instability") {
-        const contracted = options?.contracted_mbps ?? 0;
-        const connType = options?.connection_type ?? "auto";
+        const active = activeNetworkService.getActive();
+        const contracted =
+          options?.contracted_mbps ?? (active ? active.contracted_speed_mbps : 0);
+        const connType = options?.connection_type ?? active?.connection_type ?? "auto";
 
-        // Threshold ANATEL: cabo 40%, WiFi 30%; fallback = slow_threshold_mbps da settings
+        // Threshold ANATEL: cabo 40%, WiFi 30%; fallback = slow_threshold da rede ativa
         let anatelThreshold = 0;
         if (contracted > 0) {
           anatelThreshold =
             connType === "wifi" ? contracted * 0.3 : contracted * 0.4;
         }
 
-        // Se não tiver velocidade contratada configurada, usa o threshold salvo nas settings
         if (anatelThreshold <= 0) {
-          const row = db
-            .prepare(
-              "SELECT value FROM settings WHERE key = 'slow_threshold_mbps'",
-            )
-            .get() as { value: string } | undefined;
-          anatelThreshold = Number(row?.value ?? 10);
+          anatelThreshold = active?.slow_threshold_mbps ?? 10;
         }
 
-        // Todos os dias medidos no período, contando quedas pelo threshold ANATEL
         const slowDays = db
           .prepare(
             `
@@ -150,11 +190,12 @@ export function registerHandlers(scheduler: SchedulerService): void {
                COUNT(CASE WHEN download < ? THEN 1 END) AS slow_count
         FROM speed_results
         WHERE tested_at >= datetime('now', '-' || ? || ' days')
+          ${whereNet}
         GROUP BY day
         ORDER BY day DESC
       `,
           )
-          .all(anatelThreshold, days);
+          .all(anatelThreshold, days, ...scopeParams);
 
         const connectionComparison = db
           .prepare(
@@ -164,12 +205,12 @@ export function registerHandlers(scheduler: SchedulerService): void {
                COUNT(*) AS total
         FROM speed_results
         WHERE tested_at >= datetime('now', '-' || ? || ' days')
+          ${whereNet}
         GROUP BY connection_type
       `,
           )
-          .all(days);
+          .all(days, ...scopeParams);
 
-        // Por dia + hora com instabilidade (avg abaixo do threshold ANATEL)
         const dailyHourly = db
           .prepare(
             `
@@ -182,12 +223,13 @@ export function registerHandlers(scheduler: SchedulerService): void {
                COUNT(CASE WHEN download < ? THEN 1 END) AS slow_count
         FROM speed_results
         WHERE tested_at >= datetime('now', '-' || ? || ' days')
+          ${whereNet}
         GROUP BY day, hour
         HAVING AVG(download) < ? OR MIN(download) < ?
         ORDER BY day DESC, hour ASC
       `,
           )
-          .all(anatelThreshold, days, anatelThreshold, anatelThreshold);
+          .all(anatelThreshold, days, ...scopeParams, anatelThreshold, anatelThreshold);
 
         const totalSlowDays = (slowDays as { slow_count: number }[]).filter(
           (d) => d.slow_count > 0,
@@ -228,27 +270,123 @@ export function registerHandlers(scheduler: SchedulerService): void {
     IPC_CHANNELS.SETTINGS_SET,
     (_event, settings: Record<string, string>) => {
       const db = getDb();
-      const upsert = db.prepare(
-        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+      const filtered = Object.entries(settings).filter(
+        ([key]) => !LEGACY_NETWORK_KEYS.has(key),
       );
-      const upsertMany = db.transaction((entries: [string, string][]) => {
-        for (const [key, value] of entries) upsert.run(key, value);
-      });
-      upsertMany(Object.entries(settings));
+      if (filtered.length > 0) {
+        const upsert = db.prepare(
+          "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+        );
+        const upsertMany = db.transaction((entries: [string, string][]) => {
+          for (const [key, value] of entries) upsert.run(key, value);
+        });
+        upsertMany(filtered);
+      }
 
       if (settings.interval_minutes) {
         scheduler.updateInterval(Number(settings.interval_minutes));
-      }
-      if (settings.slow_threshold_mbps) {
-        scheduler.updateThreshold(Number(settings.slow_threshold_mbps));
-      }
-      if (settings.connection_type) {
-        scheduler.updateConnectionType(settings.connection_type);
       }
 
       return { ok: true };
     },
   );
+
+  // ===== NETWORKS CRUD =====
+
+  ipcMain.handle(IPC_CHANNELS.NETWORKS_LIST, () => {
+    try {
+      return networksRepo.list();
+    } catch (err) {
+      throw toUserFacingError(err, "list-networks");
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.NETWORKS_GET_ACTIVE, () => {
+    try {
+      return activeNetworkService.getState();
+    } catch (err) {
+      throw toUserFacingError(err, "list-networks");
+    }
+  });
+
+  ipcMain.handle(
+    IPC_CHANNELS.NETWORKS_CREATE,
+    (_event, input: Parameters<typeof networksRepo.create>[0]) => {
+      try {
+        const created = networksRepo.create(input);
+        activeNetworkService.notifyNetworksChanged();
+        return created;
+      } catch (err) {
+        throw toUserFacingError(err, "create-network");
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.NETWORKS_UPDATE,
+    (
+      _event,
+      payload: {
+        id: number;
+        patch: Parameters<typeof networksRepo.update>[1];
+      },
+    ) => {
+      try {
+        const updated = networksRepo.update(payload.id, payload.patch);
+        activeNetworkService.notifyNetworksChanged();
+        return updated;
+      } catch (err) {
+        throw toUserFacingError(err, "update-network");
+      }
+    },
+  );
+
+  ipcMain.handle(IPC_CHANNELS.NETWORKS_DELETE, (_event, id: number) => {
+    try {
+      const active = activeNetworkService.getActive();
+      networksRepo.remove(id);
+      if (active && active.id === id) {
+        const remaining = networksRepo.list();
+        if (remaining.length > 0) {
+          activeNetworkService.setActive(remaining[0].id, { manual: false });
+        }
+      }
+      activeNetworkService.notifyNetworksChanged();
+      return { ok: true };
+    } catch (err) {
+      throw toUserFacingError(err, "delete-network");
+    }
+  });
+
+  ipcMain.handle(
+    IPC_CHANNELS.NETWORKS_SET_ACTIVE,
+    (_event, id: number) => {
+      try {
+        return activeNetworkService.setActive(id, { manual: true });
+      } catch (err) {
+        throw toUserFacingError(err, "set-active-network");
+      }
+    },
+  );
+
+  ipcMain.handle(IPC_CHANNELS.NETWORKS_SUGGEST_FROM_LIVE, async () => {
+    try {
+      const info = await getNetworkInfo();
+      const existing = networksRepo.getByIdentity(info.networkName, info.connectionType);
+      return {
+        live: info,
+        alreadyRegistered: !!existing,
+        suggestion: {
+          name: info.networkName,
+          ssid: info.networkName,
+          connection_type: info.connectionType,
+          isp_name: info.ispName === "Desconhecido" ? "" : info.ispName,
+        },
+      };
+    } catch (err) {
+      throw toUserFacingError(err, "suggest-network");
+    }
+  });
 
   ipcMain.handle(IPC_CHANNELS.EXPORT_PDF, async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
@@ -297,8 +435,12 @@ export function registerHandlers(scheduler: SchedulerService): void {
     ) => {
       const db = getDb();
       const win = BrowserWindow.fromWebContents(event.sender);
+      const active = activeNetworkService.getActive();
+      const networkId = active?.id ?? null;
+      const whereNet = networkId !== null ? "AND network_id = ?" : "";
 
-      const contracted = opts?.contracted_mbps ?? 0;
+      const contracted =
+        opts?.contracted_mbps ?? (active ? active.contracted_speed_mbps : 0);
 
       let wiredThreshold = 0;
       let wifiThreshold = 0;
@@ -307,19 +449,11 @@ export function registerHandlers(scheduler: SchedulerService): void {
         wifiThreshold = contracted * 0.3;
       }
       if (wiredThreshold <= 0) {
-        const row = db
-          .prepare(
-            "SELECT value FROM settings WHERE key = 'slow_threshold_mbps'",
-          )
-          .get() as { value: string } | undefined;
-        wiredThreshold = Number(row?.value ?? 10);
+        wiredThreshold = active?.slow_threshold_mbps ?? 10;
         wifiThreshold = wiredThreshold;
       }
 
-      const ispRow = db
-        .prepare("SELECT value FROM settings WHERE key = 'isp_name'")
-        .get() as { value: string } | undefined;
-      const ispName = ispRow?.value?.trim() || "Não configurado";
+      const ispName = (active?.isp_name ?? "").trim() || "Não configurado";
 
       interface EvidenceRow {
         tested_at: string;
@@ -336,6 +470,11 @@ export function registerHandlers(scheduler: SchedulerService): void {
         result_url: string | null;
       }
 
+      const violationParams =
+        networkId !== null
+          ? [days, networkId, wifiThreshold, wiredThreshold]
+          : [days, wifiThreshold, wiredThreshold];
+
       const violations = db
         .prepare(
           `
@@ -343,6 +482,7 @@ export function registerHandlers(scheduler: SchedulerService): void {
              connection_type, network_name, isp_name, server_host, server_name, result_url
       FROM speed_results
       WHERE tested_at >= datetime('now', '-' || ? || ' days')
+        ${whereNet}
         AND (
           (connection_type = 'wifi' AND download < ?)
           OR ((connection_type IS NULL OR connection_type != 'wifi') AND download < ?)
@@ -350,7 +490,12 @@ export function registerHandlers(scheduler: SchedulerService): void {
       ORDER BY tested_at DESC
     `,
         )
-        .all(days, wifiThreshold, wiredThreshold) as EvidenceRow[];
+        .all(...violationParams) as EvidenceRow[];
+
+      const statsParams =
+        networkId !== null
+          ? [wifiThreshold, wiredThreshold, wifiThreshold, wiredThreshold, days, networkId]
+          : [wifiThreshold, wiredThreshold, wifiThreshold, wiredThreshold, days];
 
       const stats = db
         .prepare(
@@ -370,15 +515,10 @@ export function registerHandlers(scheduler: SchedulerService): void {
              END) as violation_days
       FROM speed_results
       WHERE tested_at >= datetime('now', '-' || ? || ' days')
+        ${whereNet}
     `,
         )
-        .get(
-          wifiThreshold,
-          wiredThreshold,
-          wifiThreshold,
-          wiredThreshold,
-          days,
-        ) as {
+        .get(...statsParams) as {
         total: number;
         violations: number;
         avg_download: number;
@@ -388,12 +528,18 @@ export function registerHandlers(scheduler: SchedulerService): void {
         violation_days: number;
       };
 
+      const worstHourParams =
+        networkId !== null
+          ? [days, networkId, wifiThreshold, wiredThreshold]
+          : [days, wifiThreshold, wiredThreshold];
+
       const worstHour = db
         .prepare(
           `
       SELECT strftime('%H', tested_at) as hour, COUNT(*) as cnt
       FROM speed_results
       WHERE tested_at >= datetime('now', '-' || ? || ' days')
+        ${whereNet}
         AND (
           (connection_type = 'wifi' AND download < ?)
           OR ((connection_type IS NULL OR connection_type != 'wifi') AND download < ?)
@@ -401,18 +547,21 @@ export function registerHandlers(scheduler: SchedulerService): void {
       GROUP BY hour ORDER BY cnt DESC LIMIT 1
     `,
         )
-        .get(days, wifiThreshold, wiredThreshold) as
+        .get(...worstHourParams) as
         | { hour: string; cnt: number }
         | undefined;
 
+      const dateRangeParams = networkId !== null ? [days, networkId] : [days];
       const dateRange = db
         .prepare(
           `
       SELECT MIN(date(tested_at)) as first_day, MAX(date(tested_at)) as last_day
-      FROM speed_results WHERE tested_at >= datetime('now', '-' || ? || ' days')
+      FROM speed_results
+      WHERE tested_at >= datetime('now', '-' || ? || ' days')
+        ${whereNet}
     `,
         )
-        .get(days) as { first_day: string | null; last_day: string | null };
+        .get(...dateRangeParams) as { first_day: string | null; last_day: string | null };
 
       const now = new Date();
 
@@ -464,10 +613,13 @@ export function registerHandlers(scheduler: SchedulerService): void {
           ? `${stats.avg_packet_loss.toFixed(2)}%`
           : "Dado não disponível (requer testes recentes)";
 
+      const networkLabel = active ? active.name : "Não configurado";
+
       const lines = [
         row("DOSSIÊ DE EVIDÊNCIAS - VIOLAÇÕES DE CONTRATO DE INTERNET"),
         "",
         row("Gerado em:", now.toLocaleString("pt-BR")),
+        row("Rede:", networkLabel),
         row("Operadora / ISP:", ispName),
         row(
           "Plano contratado:",
@@ -569,8 +721,12 @@ export function registerHandlers(scheduler: SchedulerService): void {
     ) => {
       const db = getDb();
       const win = BrowserWindow.fromWebContents(event.sender);
+      const active = activeNetworkService.getActive();
+      const networkId = active?.id ?? null;
+      const whereNet = networkId !== null ? "AND network_id = ?" : "";
 
-      const contracted = opts?.contracted_mbps ?? 0;
+      const contracted =
+        opts?.contracted_mbps ?? (active ? active.contracted_speed_mbps : 0);
 
       let wiredThreshold = 0;
       let wifiThreshold = 0;
@@ -579,28 +735,28 @@ export function registerHandlers(scheduler: SchedulerService): void {
         wifiThreshold = contracted * 0.3;
       }
       if (wiredThreshold <= 0) {
-        const tRow = db
-          .prepare(
-            "SELECT value FROM settings WHERE key = 'slow_threshold_mbps'",
-          )
-          .get() as { value: string } | undefined;
-        wiredThreshold = Number(tRow?.value ?? 10);
+        wiredThreshold = active?.slow_threshold_mbps ?? 10;
         wifiThreshold = wiredThreshold;
       }
 
-      const ispRow = db
-        .prepare("SELECT value FROM settings WHERE key = 'isp_name'")
-        .get() as { value: string } | undefined;
-      const ispName = ispRow?.value?.trim() || "Não configurado";
+      const ispName = (active?.isp_name ?? "").trim() || "Não configurado";
 
+      const dateRangeParams = networkId !== null ? [days, networkId] : [days];
       const dateRange = db
         .prepare(
           `
       SELECT MIN(date(tested_at)) as first_day, MAX(date(tested_at)) as last_day
-      FROM speed_results WHERE tested_at >= datetime('now', '-' || ? || ' days')
+      FROM speed_results
+      WHERE tested_at >= datetime('now', '-' || ? || ' days')
+        ${whereNet}
     `,
         )
-        .get(days) as { first_day: string | null; last_day: string | null };
+        .get(...dateRangeParams) as { first_day: string | null; last_day: string | null };
+
+      const statsParams =
+        networkId !== null
+          ? [wifiThreshold, wiredThreshold, wifiThreshold, wiredThreshold, days, networkId]
+          : [wifiThreshold, wiredThreshold, wifiThreshold, wiredThreshold, days];
 
       const stats = db
         .prepare(
@@ -621,15 +777,10 @@ export function registerHandlers(scheduler: SchedulerService): void {
              END) as violation_days
       FROM speed_results
       WHERE tested_at >= datetime('now', '-' || ? || ' days')
+        ${whereNet}
     `,
         )
-        .get(
-          wifiThreshold,
-          wiredThreshold,
-          wifiThreshold,
-          wiredThreshold,
-          days,
-        ) as {
+        .get(...statsParams) as {
         total: number;
         violations: number;
         avg_download: number;
@@ -640,12 +791,18 @@ export function registerHandlers(scheduler: SchedulerService): void {
         violation_days: number;
       };
 
+      const worstHourParams =
+        networkId !== null
+          ? [days, networkId, wifiThreshold, wiredThreshold]
+          : [days, wifiThreshold, wiredThreshold];
+
       const worstHour = db
         .prepare(
           `
       SELECT strftime('%H', tested_at) as hour, COUNT(*) as cnt
       FROM speed_results
       WHERE tested_at >= datetime('now', '-' || ? || ' days')
+        ${whereNet}
         AND (
           (connection_type = 'wifi' AND download < ?)
           OR ((connection_type IS NULL OR connection_type != 'wifi') AND download < ?)
@@ -653,7 +810,7 @@ export function registerHandlers(scheduler: SchedulerService): void {
       GROUP BY hour ORDER BY cnt DESC LIMIT 1
     `,
         )
-        .get(days, wifiThreshold, wiredThreshold) as
+        .get(...worstHourParams) as
         | { hour: string; cnt: number }
         | undefined;
 
@@ -667,6 +824,10 @@ export function registerHandlers(scheduler: SchedulerService): void {
         avg_download: number;
         avg_upload: number;
       }
+      const dailyParams =
+        networkId !== null
+          ? [wifiThreshold, wiredThreshold, days, networkId]
+          : [wifiThreshold, wiredThreshold, days];
       const dailyStats = db
         .prepare(
           `
@@ -683,11 +844,12 @@ export function registerHandlers(scheduler: SchedulerService): void {
              AVG(upload) as avg_upload
       FROM speed_results
       WHERE tested_at >= datetime('now', '-' || ? || ' days')
+        ${whereNet}
       GROUP BY day, COALESCE(connection_type, 'wired')
       ORDER BY day DESC, connection_type
     `,
         )
-        .all(wifiThreshold, wiredThreshold, days) as DailyRow[];
+        .all(...dailyParams) as DailyRow[];
 
       interface ViolRow {
         tested_at: string;
@@ -702,6 +864,10 @@ export function registerHandlers(scheduler: SchedulerService): void {
         server_host: string | null;
         result_url: string | null;
       }
+      const violParams =
+        networkId !== null
+          ? [days, networkId, wifiThreshold, wiredThreshold]
+          : [days, wifiThreshold, wiredThreshold];
       const violations = db
         .prepare(
           `
@@ -709,6 +875,7 @@ export function registerHandlers(scheduler: SchedulerService): void {
              connection_type, network_name, server_name, server_host, result_url
       FROM speed_results
       WHERE tested_at >= datetime('now', '-' || ? || ' days')
+        ${whereNet}
         AND (
           (connection_type = 'wifi' AND download < ?)
           OR ((connection_type IS NULL OR connection_type != 'wifi') AND download < ?)
@@ -716,7 +883,7 @@ export function registerHandlers(scheduler: SchedulerService): void {
       ORDER BY tested_at DESC
     `,
         )
-        .all(days, wifiThreshold, wiredThreshold) as ViolRow[];
+        .all(...violParams) as ViolRow[];
 
       const now = new Date();
 
@@ -833,6 +1000,8 @@ export function registerHandlers(scheduler: SchedulerService): void {
         </div>`
           : "";
 
+      const networkLabel = active ? active.name : "Não configurado";
+
       const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -881,10 +1050,11 @@ tr{page-break-inside:avoid}
 <div class="header">
   <div>
     <h1>⚠ Dossiê de Evidências</h1>
-    <div class="sub">Violações de Contrato de Internet · Network Connection Monitor</div>
+    <div class="sub">Violações de Contrato de Internet · Conexão Flow</div>
   </div>
   <div class="header-right">
     <div class="isp">${h(ispName)}</div>
+    <div>Rede: <strong>${h(networkLabel)}</strong></div>
     <div>Plano contratado: <strong>${contracted > 0 ? contracted + " Mbps" : "não configurado"}</strong></div>
     <div>Gerado em: ${h(now.toLocaleString("pt-BR"))}</div>
   </div>
