@@ -6,6 +6,7 @@ import { closeDb, getDb } from "./database/connection";
 import { SchedulerService } from "./services/scheduler.service";
 import { registerHandlers } from "./ipc/handlers";
 import { getNetworkInfo } from "./services/network-info.service";
+import { activeNetworkService } from "./services/active-network.service";
 import { createTray } from "./services/tray.service";
 import { IPC_CHANNELS } from "./ipc/channels";
 import { writeMainLog } from "./utils/logger";
@@ -145,14 +146,8 @@ app
       )?.value ?? fallback;
 
     const intervalMinutes = Number(getVal("interval_minutes", "15"));
-    const thresholdMbps = Number(getVal("slow_threshold_mbps", "10"));
-    const connectionType = getVal("connection_type", "auto");
 
-    scheduler = new SchedulerService(
-      intervalMinutes,
-      thresholdMbps,
-      connectionType,
-    );
+    scheduler = new SchedulerService(intervalMinutes);
     registerHandlers(scheduler);
     writeMainLog("IPC handlers registered");
 
@@ -166,6 +161,7 @@ app
     setTimeout(async () => {
       try {
         const info = await getNetworkInfo();
+        activeNetworkService.reconcile(info);
         for (const win of BrowserWindow.getAllWindows()) {
           if (!win.isDestroyed())
             win.webContents.send(IPC_CHANNELS.NETWORK_INFO_UPDATE, info);
