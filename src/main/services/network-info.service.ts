@@ -23,6 +23,10 @@ function isWindows(): boolean {
   return process.platform === 'win32'
 }
 
+function isMacOS(): boolean {
+  return process.platform === 'darwin'
+}
+
 function runCmd(cmd: string, timeoutMs = 4000): string {
   try {
     return execSync(cmd, {
@@ -103,6 +107,68 @@ function getNativeLinuxConnectionType(): 'wifi' | 'wired' {
   return 'wired'
 }
 
+// macOS: interface padrão que tem rota para a internet
+function getMacOSDefaultInterface(): string | null {
+  const out = runCmd('route -n get default 2>/dev/null')
+  if (!out) return null
+  const match = out.match(/interface:\s*(\S+)/)
+  return match ? match[1].trim() : null
+}
+
+// macOS: pares (serviceName, device) do `networksetup -listallhardwareports`
+interface MacHardwarePort {
+  service: string
+  device: string
+}
+
+function getMacOSHardwarePorts(): MacHardwarePort[] {
+  const out = runCmd('networksetup -listallhardwareports 2>/dev/null', 5000)
+  if (!out) return []
+
+  const ports: MacHardwarePort[] = []
+  let current: Partial<MacHardwarePort> = {}
+  for (const line of out.split('\n')) {
+    const portMatch = line.match(/^Hardware Port:\s*(.+)$/)
+    const deviceMatch = line.match(/^Device:\s*(.+)$/)
+    if (portMatch) current = { service: portMatch[1].trim() }
+    if (deviceMatch && current.service) {
+      ports.push({ service: current.service, device: deviceMatch[1].trim() })
+      current = {}
+    }
+  }
+  return ports
+}
+
+function isMacOSWifiService(serviceName: string): boolean {
+  return /wi-?fi|airport/i.test(serviceName)
+}
+
+// macOS: lê SSID do WiFi. Tenta networksetup (estável), depois ipconfig getsummary (fallback)
+function getMacOSWifiInfo(wifiDevice: string): WifiInfo {
+  const nsOut = runCmd(`networksetup -getairportnetwork ${wifiDevice} 2>/dev/null`)
+  if (nsOut) {
+    const match = nsOut.match(/Current Wi-Fi Network:\s*(.+)$/i)
+    if (match) {
+      const ssid = match[1].trim()
+      if (ssid) return { ssid, connected: true }
+    }
+    if (/not associated|off|power/i.test(nsOut)) {
+      return { ssid: null, connected: false }
+    }
+  }
+
+  const summary = runCmd(`ipconfig getsummary ${wifiDevice} 2>/dev/null`)
+  if (summary) {
+    const match = summary.match(/\bSSID\s*:\s*([^\n]+)/)
+    if (match) {
+      const ssid = match[1].trim()
+      if (ssid) return { ssid, connected: true }
+    }
+  }
+
+  return { ssid: null, connected: false }
+}
+
 async function fetchIsp(): Promise<string> {
   // Usa net.fetch do Electron — respeita proxy do sistema e evita restrições do Node
   const apis: Array<{ url: string; extract: (d: Record<string, string>) => string | undefined }> = [
@@ -153,6 +219,32 @@ export async function getNetworkInfo(): Promise<NetworkInfo> {
     } else {
       connectionType = 'wired'
       networkName = getWindowsEthernetProfileName(wsl)
+    }
+  } else if (isMacOS()) {
+    // macOS: resolve interface default → hardware port → SSID ou nome do serviço Ethernet
+    const defaultInterface = getMacOSDefaultInterface()
+    const ports = getMacOSHardwarePorts()
+    const matchingPort = defaultInterface
+      ? ports.find((p) => p.device === defaultInterface)
+      : undefined
+
+    if (matchingPort && isMacOSWifiService(matchingPort.service)) {
+      connectionType = 'wifi'
+      const wifi = getMacOSWifiInfo(matchingPort.device)
+      networkName = wifi.ssid ?? 'WiFi'
+    } else if (matchingPort) {
+      connectionType = 'wired'
+      networkName = matchingPort.service || 'Ethernet'
+    } else {
+      // Sem rota default identificada — tenta Wi-Fi em en0 como último recurso
+      const wifi = getMacOSWifiInfo('en0')
+      if (wifi.connected && wifi.ssid) {
+        connectionType = 'wifi'
+        networkName = wifi.ssid
+      } else {
+        connectionType = 'wired'
+        networkName = 'Ethernet'
+      }
     }
   } else {
     // Linux nativo
