@@ -412,11 +412,14 @@ export function registerHandlers(scheduler: SchedulerService): void {
 
   ipcMain.handle(IPC_CHANNELS.SAVE_PNG, async (event, dataUrl: string) => {
     const win = BrowserWindow.fromWebContents(event.sender);
-
-    const { filePath } = await dialog.showSaveDialog(win ?? undefined, {
+    const saveOpts = {
       defaultPath: `relatorio-rede-${new Date().toISOString().split("T")[0]}.png`,
       filters: [{ name: "PNG Image", extensions: ["png"] }],
-    });
+    };
+
+    const { filePath } = win
+      ? await dialog.showSaveDialog(win, saveOpts)
+      : await dialog.showSaveDialog(saveOpts);
 
     if (filePath) {
       const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
@@ -696,13 +699,16 @@ export function registerHandlers(scheduler: SchedulerService): void {
       const safeName = ispName.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase();
       const defaultPath = `dossie-evidencias-${safeName}-${now.toISOString().split("T")[0]}.csv`;
 
-      const { filePath } = await dialog.showSaveDialog(win ?? undefined, {
+      const csvSaveOpts = {
         defaultPath,
         filters: [
           { name: "CSV (Excel / LibreOffice)", extensions: ["csv"] },
           { name: "Todos os arquivos", extensions: ["*"] },
         ],
-      });
+      };
+      const { filePath } = win
+        ? await dialog.showSaveDialog(win, csvSaveOpts)
+        : await dialog.showSaveDialog(csvSaveOpts);
 
       if (filePath) {
         fs.writeFileSync(filePath, "﻿" + csvContent, "utf8");
@@ -1050,7 +1056,7 @@ tr{page-break-inside:avoid}
 <div class="header">
   <div>
     <h1>⚠ Dossiê de Evidências</h1>
-    <div class="sub">Violações de Contrato de Internet · Conexão Flow</div>
+    <div class="sub">Violações de Contrato de Internet · Caiu aí?</div>
   </div>
   <div class="header-right">
     <div class="isp">${h(ispName)}</div>
@@ -1131,7 +1137,7 @@ tr{page-break-inside:avoid}
 </table>
 
 <div class="footer">
-  <span>Conexão Flow · ${h(now.toLocaleString("pt-BR"))}</span>
+  <span>Caiu aí? · ${h(now.toLocaleString("pt-BR"))}</span>
   <span>Documento para reclamações na ANATEL (anatel.gov.br/consumidor) e PROCON</span>
 </div>
 
@@ -1163,10 +1169,13 @@ tr{page-break-inside:avoid}
         const safeName = ispName.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase();
         const defaultPath = `dossie-evidencias-${safeName}-${now.toISOString().split("T")[0]}.pdf`;
 
-        const { filePath } = await dialog.showSaveDialog(win ?? undefined, {
+        const pdfSaveOpts = {
           defaultPath,
           filters: [{ name: "PDF", extensions: ["pdf"] }],
-        });
+        };
+        const { filePath } = win
+          ? await dialog.showSaveDialog(win, pdfSaveOpts)
+          : await dialog.showSaveDialog(pdfSaveOpts);
 
         if (filePath) {
           fs.writeFileSync(filePath, pdfBuffer);

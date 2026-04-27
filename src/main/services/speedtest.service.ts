@@ -272,10 +272,6 @@ function parseOoklaOutput(raw: string): OoklaResult {
   } catch {
     throw new Error(`Nao foi possivel interpretar a saida: ${trimmed}`);
   }
-
-  writeMainLog("speedtest: global paths after registration", {
-    globalPaths: [...globalPaths],
-  });
 }
 
 export async function runSpeedTest(): Promise<SpeedResult> {
