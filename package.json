@@ -99,7 +99,9 @@
       "maintainer": "Ricardo Mendes <sr_ricardomendes@hotmail.com>",
       "category": "Network",
       "desktop": {
-        "Name": "Caiu aí"
+        "entry": {
+          "Name": "Caiu aí"
+        }
       }
     },
     "win": {
