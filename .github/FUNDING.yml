@@ -1,0 +1,8 @@
+# Os campos abaixo controlam o botão "Sponsor" que aparece no topo do repo no GitHub.
+# Troque os usernames pelos corretos antes de commitar (ou comente as linhas que não usar).
+
+github: [HenryKun55, ricardomendes95]
+buy_me_a_coffee: henrykun55
+# ko_fi: SEU_USUARIO
+# patreon: SEU_USUARIO
+# custom: ["https://exemplo.com/doacao"]
