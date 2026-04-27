@@ -30,6 +30,22 @@ const INTERVAL_OPTIONS = [
   { value: '240', label: 'A cada 4 horas', note: '' }
 ]
 
+const OFFLINE_INTERVAL_OPTIONS = [
+  { value: '5', label: 'A cada 5 segundos', note: 'Detecção quase instantânea — uso intenso enquanto offline' },
+  { value: '15', label: 'A cada 15 segundos', note: '' },
+  { value: '30', label: 'A cada 30 segundos (recomendado)', note: 'Equilíbrio entre rapidez e economia' },
+  { value: '60', label: 'A cada 1 min', note: '' },
+  { value: '300', label: 'A cada 5 min', note: '' },
+  { value: '600', label: 'A cada 10 min', note: '' },
+  { value: '900', label: 'A cada 15 min', note: '' },
+  { value: '1200', label: 'A cada 20 min', note: '' },
+  { value: '1800', label: 'A cada 30 min', note: '' },
+  { value: '2700', label: 'A cada 45 min', note: '' },
+  { value: '3600', label: 'A cada 1 hora', note: '' },
+  { value: '7200', label: 'A cada 2 horas', note: '' },
+  { value: '14400', label: 'A cada 4 horas', note: '' }
+]
+
 function getAutostartLabel(platform: NodeJS.Platform): string {
   switch (platform) {
     case 'win32':
@@ -49,13 +65,27 @@ export function SettingsPage(): JSX.Element {
   const [saved, setSaved] = useState(false)
 
   const [interval, setInterval] = useState(settings.interval_minutes)
-  const [notifs, setNotifs] = useState(settings.notifications_enabled === 'true')
+  const [offlineInterval, setOfflineInterval] = useState(
+    settings.offline_interval_seconds ?? '30'
+  )
+  const [notifyTestOverlay, setNotifyTestOverlay] = useState(
+    settings.notify_test_overlay !== 'false'
+  )
+  const [notifyDown, setNotifyDown] = useState(
+    settings.notify_internet_down !== 'false'
+  )
+  const [notifyRestored, setNotifyRestored] = useState(
+    settings.notify_internet_restored !== 'false'
+  )
   const [autostart, setAutostart] = useState(false)
   const autostartLabel = getAutostartLabel(ipc.getPlatform())
 
   useEffect(() => {
     setInterval(settings.interval_minutes)
-    setNotifs(settings.notifications_enabled === 'true')
+    setOfflineInterval(settings.offline_interval_seconds ?? '30')
+    setNotifyTestOverlay(settings.notify_test_overlay !== 'false')
+    setNotifyDown(settings.notify_internet_down !== 'false')
+    setNotifyRestored(settings.notify_internet_restored !== 'false')
   }, [settings])
 
   useEffect(() => {
@@ -66,7 +96,10 @@ export function SettingsPage(): JSX.Element {
     await Promise.all([
       saveSettings({
         interval_minutes: interval,
-        notifications_enabled: String(notifs)
+        offline_interval_seconds: offlineInterval,
+        notify_test_overlay: String(notifyTestOverlay),
+        notify_internet_down: String(notifyDown),
+        notify_internet_restored: String(notifyRestored)
       }),
       ipc.setAutostart(autostart)
     ])
@@ -75,6 +108,9 @@ export function SettingsPage(): JSX.Element {
   }
 
   const selectedInterval = INTERVAL_OPTIONS.find((o) => o.value === interval)
+  const selectedOfflineInterval = OFFLINE_INTERVAL_OPTIONS.find(
+    (o) => o.value === offlineInterval
+  )
 
   return (
     <div className="space-y-4 max-w-lg">
@@ -121,9 +157,9 @@ export function SettingsPage(): JSX.Element {
             Intervalo padrão da indústria para monitoramento de ISP é 15 minutos
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Intervalo entre testes</Label>
+            <Label>Intervalo quando com internet</Label>
             <Select value={interval} onValueChange={setInterval}>
               <SelectTrigger>
                 <SelectValue />
@@ -140,26 +176,72 @@ export function SettingsPage(): JSX.Element {
               <p className="text-xs text-muted-foreground">{selectedInterval.note}</p>
             )}
           </div>
+
+          <div className="space-y-2">
+            <Label>Intervalo quando sem internet</Label>
+            <Select value={offlineInterval} onValueChange={setOfflineInterval}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {OFFLINE_INTERVAL_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {selectedOfflineInterval?.note ||
+                'Quando a conexão cai, faz sentido testar mais rápido para detectar o retorno'}
+            </p>
+          </div>
         </CardContent>
       </Card>
 
       {/* ALERTAS GLOBAIS */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Alertas</CardTitle>
+          <CardTitle className="text-sm font-medium">Notificações</CardTitle>
           <CardDescription className="text-xs">
-            O limiar de cada rede é configurado individualmente. Aqui ficam os toggles globais.
+            Escolha quais avisos você quer receber. Por padrão, todos vêm ligados.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <Label>Notificações do sistema</Label>
+              <Label>Toast a cada teste</Label>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Exibir notificação desktop ao detectar lentidão
+                Mostrar o overlay com o resultado do teste no canto da tela
               </p>
             </div>
-            <Switch checked={notifs} onCheckedChange={setNotifs} />
+            <Switch
+              checked={notifyTestOverlay}
+              onCheckedChange={setNotifyTestOverlay}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Aviso quando a internet cair</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Notificação do sistema ao detectar perda de conexão
+              </p>
+            </div>
+            <Switch checked={notifyDown} onCheckedChange={setNotifyDown} />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Aviso quando a internet voltar</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Notificação do sistema quando a conexão for restaurada
+              </p>
+            </div>
+            <Switch
+              checked={notifyRestored}
+              onCheckedChange={setNotifyRestored}
+            />
           </div>
 
           <div className="flex items-center justify-between">

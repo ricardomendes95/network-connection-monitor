@@ -283,8 +283,15 @@ export function registerHandlers(scheduler: SchedulerService): void {
         upsertMany(filtered);
       }
 
-      if (settings.interval_minutes) {
-        scheduler.updateInterval(Number(settings.interval_minutes));
+      if (settings.interval_minutes || settings.offline_interval_seconds) {
+        scheduler.updateIntervals({
+          onlineMinutes: settings.interval_minutes
+            ? Number(settings.interval_minutes)
+            : undefined,
+          offlineSeconds: settings.offline_interval_seconds
+            ? Number(settings.offline_interval_seconds)
+            : undefined,
+        });
       }
 
       return { ok: true };

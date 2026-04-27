@@ -18,10 +18,14 @@ export interface SpeedResult {
 
 export interface Settings {
   interval_minutes: string
-  notifications_enabled: string
+  offline_interval_seconds: string
+  notify_test_overlay: string
+  notify_internet_down: string
+  notify_internet_restored: string
   active_network_id?: string
   active_network_manual_override?: string
   // Chaves legadas, ainda presentes no banco por retrocompatibilidade — não use
+  notifications_enabled?: string
   slow_threshold_mbps?: string
   contracted_speed_mbps?: string
   connection_type?: string
