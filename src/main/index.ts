@@ -8,6 +8,7 @@ import { registerHandlers } from "./ipc/handlers";
 import { getNetworkInfo } from "./services/network-info.service";
 import { activeNetworkService } from "./services/active-network.service";
 import { createTray } from "./services/tray.service";
+import { createOverlayWindow } from "./services/overlay-toast.service";
 import { IPC_CHANNELS } from "./ipc/channels";
 import { writeMainLog } from "./utils/logger";
 
@@ -152,6 +153,7 @@ app
     writeMainLog("IPC handlers registered");
 
     mainWindowRef = createWindow();
+    createOverlayWindow(join(__dirname, "../preload/index.js"));
     createTray({
       onRunNow: () => scheduler?.runNow(),
       onOpenMain: () => ensureMainWindow(),

@@ -6,12 +6,20 @@ type State = 'testing' | 'done' | 'failed'
 
 export function OverlayPage(): JSX.Element {
   const [state, setState] = useState<State>('testing')
+  const [download, setDownload] = useState<number | null>(null)
 
   useEffect(() => {
     document.body.style.background = 'transparent'
     document.documentElement.style.background = 'transparent'
 
-    ipc.onTestCompleted(() => setState('done'))
+    ipc.onTestStarted(() => {
+      setDownload(null)
+      setState('testing')
+    })
+    ipc.onTestCompleted((result) => {
+      setDownload(result.download)
+      setState('done')
+    })
     ipc.onTestFailed(() => setState('failed'))
   }, [])
 
@@ -29,8 +37,15 @@ export function OverlayPage(): JSX.Element {
         {state === 'testing' && <Loader2 className="w-4 h-4 animate-spin" />}
         {state === 'done' && <CheckCircle2 className="w-4 h-4" />}
         {state === 'failed' && <XCircle className="w-4 h-4" />}
-        {state === 'testing' && 'Testando velocidade...'}
-        {state === 'done' && 'Teste concluído'}
+        {state === 'testing' && 'Realizando teste...'}
+        {state === 'done' && (
+          <span>
+            Teste concluído{' '}
+            {download !== null && (
+              <span className="font-semibold">↓ {download.toFixed(1)} Mbps</span>
+            )}
+          </span>
+        )}
         {state === 'failed' && 'Falha no teste de velocidade'}
       </div>
     </div>

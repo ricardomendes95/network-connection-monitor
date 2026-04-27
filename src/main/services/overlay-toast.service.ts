@@ -15,6 +15,7 @@ export function createOverlayWindow(preloadPath: string): void {
     y: 16,
     frame: false,
     transparent: true,
+    backgroundColor: '#00000000',
     alwaysOnTop: true,
     skipTaskbar: true,
     focusable: false,

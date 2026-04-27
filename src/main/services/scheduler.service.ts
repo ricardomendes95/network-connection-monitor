@@ -15,6 +15,7 @@ import {
   setTrayTesting,
   type ConnectivityStatus,
 } from "./tray.service";
+import { showOverlayWindow, hideOverlayWindowAfter } from "./overlay-toast.service";
 
 export class SchedulerService {
   private timer: NodeJS.Timeout | null = null;
@@ -75,6 +76,7 @@ export class SchedulerService {
     if (this.isRunning) return;
     this.isRunning = true;
     setTrayTesting(true);
+    showOverlayWindow();
     this.broadcast(IPC_CHANNELS.TEST_STARTED, null);
 
     try {
@@ -129,6 +131,7 @@ export class SchedulerService {
       });
 
       this.broadcast(IPC_CHANNELS.TEST_COMPLETED, saved);
+      hideOverlayWindowAfter(3000);
 
       if (this.lastConnectivity === "offline") {
         showInternetRestoredNotification(result.download);
@@ -149,6 +152,7 @@ export class SchedulerService {
       });
       setTrayOffline(testedAt);
       this.broadcast(IPC_CHANNELS.TEST_FAILED, { error: message });
+      hideOverlayWindowAfter(4000);
 
       if (this.lastConnectivity !== "offline") {
         showInternetDownNotification();
