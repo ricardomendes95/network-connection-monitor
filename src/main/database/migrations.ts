@@ -33,8 +33,12 @@ export function runMigrations(): void {
     );
 
     INSERT OR IGNORE INTO settings VALUES ('interval_minutes', '15');
+    INSERT OR IGNORE INTO settings VALUES ('offline_interval_seconds', '30');
     INSERT OR IGNORE INTO settings VALUES ('slow_threshold_mbps', '10');
     INSERT OR IGNORE INTO settings VALUES ('notifications_enabled', 'true');
+    INSERT OR IGNORE INTO settings VALUES ('notify_test_overlay', 'true');
+    INSERT OR IGNORE INTO settings VALUES ('notify_internet_down', 'true');
+    INSERT OR IGNORE INTO settings VALUES ('notify_internet_restored', 'true');
     INSERT OR IGNORE INTO settings VALUES ('contracted_speed_mbps', '100');
     INSERT OR IGNORE INTO settings VALUES ('connection_type', 'auto');
     INSERT OR IGNORE INTO settings VALUES ('isp_name', '');

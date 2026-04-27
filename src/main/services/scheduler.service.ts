@@ -16,17 +16,20 @@ import {
   type ConnectivityStatus,
 } from "./tray.service";
 import { showOverlayWindow, hideOverlayWindowAfter } from "./overlay-toast.service";
+import { getNotifPref } from "./notification-prefs";
 
 export class SchedulerService {
   private timer: NodeJS.Timeout | null = null;
   private tickTimer: NodeJS.Timeout | null = null;
   private isRunning = false;
-  private intervalMs: number;
+  private onlineIntervalMs: number;
+  private offlineIntervalMs: number;
   private nextTestAt: number = 0;
   private lastConnectivity: ConnectivityStatus = "unknown";
 
-  constructor(intervalMinutes: number) {
-    this.intervalMs = intervalMinutes * 60 * 1000;
+  constructor(onlineIntervalMinutes: number, offlineIntervalSeconds: number) {
+    this.onlineIntervalMs = onlineIntervalMinutes * 60 * 1000;
+    this.offlineIntervalMs = offlineIntervalSeconds * 1000;
   }
 
   start(): void {
@@ -42,8 +45,16 @@ export class SchedulerService {
     this.tickTimer = null;
   }
 
-  updateInterval(minutes: number): void {
-    this.intervalMs = minutes * 60 * 1000;
+  updateIntervals(opts: {
+    onlineMinutes?: number;
+    offlineSeconds?: number;
+  }): void {
+    if (opts.onlineMinutes !== undefined && opts.onlineMinutes > 0) {
+      this.onlineIntervalMs = opts.onlineMinutes * 60 * 1000;
+    }
+    if (opts.offlineSeconds !== undefined && opts.offlineSeconds > 0) {
+      this.offlineIntervalMs = opts.offlineSeconds * 1000;
+    }
     this.stop();
     this.start();
   }
@@ -52,13 +63,20 @@ export class SchedulerService {
     this.executeTest();
   }
 
+  private currentIntervalMs(): number {
+    return this.lastConnectivity === "offline"
+      ? this.offlineIntervalMs
+      : this.onlineIntervalMs;
+  }
+
   private scheduleNext(): void {
     if (this.timer) clearTimeout(this.timer);
-    this.nextTestAt = Date.now() + this.intervalMs;
+    const ms = this.currentIntervalMs();
+    this.nextTestAt = Date.now() + ms;
     this.timer = setTimeout(() => {
       this.executeTest();
       this.scheduleNext();
-    }, this.intervalMs);
+    }, ms);
   }
 
   private startTickTimer(): void {
@@ -76,7 +94,8 @@ export class SchedulerService {
     if (this.isRunning) return;
     this.isRunning = true;
     setTrayTesting(true);
-    showOverlayWindow();
+    const showOverlay = getNotifPref("notify_test_overlay");
+    if (showOverlay) showOverlayWindow();
     this.broadcast(IPC_CHANNELS.TEST_STARTED, null);
 
     try {
@@ -131,9 +150,12 @@ export class SchedulerService {
       });
 
       this.broadcast(IPC_CHANNELS.TEST_COMPLETED, saved);
-      hideOverlayWindowAfter(3000);
+      if (showOverlay) hideOverlayWindowAfter(3000);
 
-      if (this.lastConnectivity === "offline") {
+      if (
+        this.lastConnectivity === "offline" &&
+        getNotifPref("notify_internet_restored")
+      ) {
         showInternetRestoredNotification(result.download);
       }
       this.lastConnectivity = "online";
@@ -152,9 +174,12 @@ export class SchedulerService {
       });
       setTrayOffline(testedAt);
       this.broadcast(IPC_CHANNELS.TEST_FAILED, { error: message });
-      hideOverlayWindowAfter(4000);
+      if (showOverlay) hideOverlayWindowAfter(4000);
 
-      if (this.lastConnectivity !== "offline") {
+      if (
+        this.lastConnectivity !== "offline" &&
+        getNotifPref("notify_internet_down")
+      ) {
         showInternetDownNotification();
       }
       this.lastConnectivity = "offline";

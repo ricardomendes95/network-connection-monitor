@@ -31,7 +31,10 @@ export const useSpeedStore = create<SpeedStore>((set) => ({
   liveNetwork: null,
   settings: {
     interval_minutes: '15',
-    notifications_enabled: 'true'
+    offline_interval_seconds: '30',
+    notify_test_overlay: 'true',
+    notify_internet_down: 'true',
+    notify_internet_restored: 'true'
   },
 
   addResult: (result) =>
