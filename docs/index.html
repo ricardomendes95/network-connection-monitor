@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="pt-BR" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Caiu aí? — Sua internet caiu? A gente prova.</title>
+    <meta
+      name="description"
+      content="App desktop que monitora sua internet em tempo real, registra cada queda e gera o dossiê pronto pra reclamação na ANATEL e PROCON."
+    />
+    <meta property="og:title" content="Caiu aí?" />
+    <meta
+      property="og:description"
+      content="Sua internet caiu? A gente prova. Monitor automático com dossiê pronto pra ANATEL/PROCON."
+    />
+    <meta property="og:image" content="logo.png" />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="logo.png" type="image/png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "system-ui", "sans-serif"],
+            },
+            colors: {
+              ink: {
+                950: "#0a0b0e",
+                900: "#101218",
+                800: "#181b22",
+                700: "#22262f",
+              },
+              accent: {
+                400: "#fbbf24",
+                500: "#f59e0b",
+                600: "#d97706",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Inter", system-ui, sans-serif;
+      }
+      .grain::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image: radial-gradient(circle at 50% 0%, rgba(251, 191, 36, 0.08), transparent 60%);
+      }
+    </style>
+  </head>
+  <body class="bg-ink-950 text-zinc-100 antialiased">
+    <!-- ===== Header ===== -->
+    <header class="border-b border-white/5">
+      <nav class="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
+        <a href="#" class="flex items-center gap-2 font-bold text-lg">
+          <img src="logo.png" alt="" class="w-9 h-9" />
+          <span>Caiu aí?</span>
+        </a>
+        <div class="flex items-center gap-3 sm:gap-5 text-sm text-zinc-400">
+          <a href="#features" class="hover:text-white hidden sm:inline">Features</a>
+          <a href="#downloads" class="hover:text-white">Download</a>
+          <a href="#apoie" class="hover:text-white">Apoie</a>
+          <a
+            href="https://github.com/ricardomendes95/network-connection-monitor"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-white inline-flex items-center gap-1.5"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+              <path
+                d="M12 0a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5.99.11-.77.42-1.3.76-1.6-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.82 1.1.82 2.22v3.29c0 .32.22.69.83.58A12 12 0 0 0 12 0z"
+              />
+            </svg>
+            <span>GitHub</span>
+          </a>
+        </div>
+      </nav>
+    </header>
+
+    <!-- ===== Hero ===== -->
+    <section class="relative grain overflow-hidden">
+      <div class="mx-auto max-w-6xl px-6 pt-16 pb-20 sm:pt-24 sm:pb-28 text-center">
+        <img
+          src="logo.png"
+          alt="Caiu aí?"
+          class="w-40 h-40 sm:w-56 sm:h-56 mx-auto drop-shadow-[0_0_40px_rgba(251,191,36,0.25)]"
+        />
+        <h1 class="mt-6 text-5xl sm:text-7xl font-black tracking-tight">
+          Caiu aí<span class="text-accent-400">?</span>
+        </h1>
+        <p class="mt-4 text-xl sm:text-2xl text-zinc-300 max-w-2xl mx-auto">
+          Sua internet caiu? <span class="text-accent-400 font-semibold">A gente prova.</span>
+        </p>
+        <p class="mt-3 text-base text-zinc-400 max-w-xl mx-auto">
+          App desktop que monitora sua conexão em tempo real, registra cada queda e
+          gera o dossiê pronto pra reclamação na ANATEL e PROCON.
+        </p>
+
+        <!-- Primary CTA -->
+        <div class="mt-10 flex flex-col items-center gap-3">
+          <a
+            id="primaryDownload"
+            href="#downloads"
+            class="inline-flex items-center gap-2 px-7 py-3.5 bg-accent-400 hover:bg-accent-500 text-ink-950 font-bold rounded-xl text-lg transition shadow-[0_8px_24px_rgba(251,191,36,0.3)]"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+            </svg>
+            <span id="primaryDownloadLabel">Baixar para seu sistema</span>
+          </a>
+          <a href="#downloads" class="text-sm text-zinc-400 hover:text-zinc-200">
+            Ver outras opções →
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Features ===== -->
+    <section id="features" class="border-t border-white/5 bg-ink-900/40">
+      <div class="mx-auto max-w-6xl px-6 py-20">
+        <h2 class="text-3xl sm:text-4xl font-bold text-center">Pra que serve?</h2>
+        <p class="mt-3 text-zinc-400 text-center max-w-2xl mx-auto">
+          Pra quando a operadora insistir que "tá tudo normal" e você precisar
+          mostrar exatamente quantas vezes a conexão caiu — com hora, duração e
+          velocidade medida.
+        </p>
+
+        <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div class="bg-ink-800 border border-white/5 rounded-xl p-6">
+            <div class="w-10 h-10 rounded-lg bg-accent-400/10 text-accent-400 flex items-center justify-center mb-4">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 class="font-semibold">Testes automáticos</h3>
+            <p class="mt-1.5 text-sm text-zinc-400">
+              Speedtest oficial da Ookla rodando em segundo plano, no intervalo
+              que você escolher (de 1 minuto a 4 horas).
+            </p>
+          </div>
+
+          <div class="bg-ink-800 border border-white/5 rounded-xl p-6">
+            <div class="w-10 h-10 rounded-lg bg-accent-400/10 text-accent-400 flex items-center justify-center mb-4">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0a3 3 0 11-6 0" />
+              </svg>
+            </div>
+            <h3 class="font-semibold">Alertas inteligentes</h3>
+            <p class="mt-1.5 text-sm text-zinc-400">
+              Avisa só quando a internet cai ou volta — nada de spam a cada
+              teste. Roda na menu bar / system tray.
+            </p>
+          </div>
+
+          <div class="bg-ink-800 border border-white/5 rounded-xl p-6">
+            <div class="w-10 h-10 rounded-lg bg-accent-400/10 text-accent-400 flex items-center justify-center mb-4">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.6a2 2 0 011.4.6L18.4 8a2 2 0 01.6 1.4V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <h3 class="font-semibold">Dossiê pra ANATEL</h3>
+            <p class="mt-1.5 text-sm text-zinc-400">
+              Exporta PDF e CSV com todas as violações do contrato — referência
+              ANATEL 614/2013 (40% cabo / 30% WiFi).
+            </p>
+          </div>
+
+          <div class="bg-ink-800 border border-white/5 rounded-xl p-6">
+            <div class="w-10 h-10 rounded-lg bg-accent-400/10 text-accent-400 flex items-center justify-center mb-4">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.5 10.5h17m-17 3h17M12 4v16m-3-16h6M4 8a4 4 0 014-4h8a4 4 0 014 4v8a4 4 0 01-4 4H8a4 4 0 01-4-4V8z" />
+              </svg>
+            </div>
+            <h3 class="font-semibold">Multi-rede</h3>
+            <p class="mt-1.5 text-sm text-zinc-400">
+              Cadastre Casa, Escritório, Café — o app detecta a rede ativa e
+              separa o histórico por provedor automaticamente.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Downloads ===== -->
+    <section id="downloads" class="border-t border-white/5">
+      <div class="mx-auto max-w-6xl px-6 py-20">
+        <h2 class="text-3xl sm:text-4xl font-bold text-center">Download</h2>
+        <p class="mt-3 text-zinc-400 text-center">
+          Versão atual:
+          <span id="releaseTag" class="font-mono text-zinc-200">carregando…</span>
+        </p>
+
+        <div id="downloadGrid" class="mt-10 grid sm:grid-cols-3 gap-5">
+          <!-- platforms inserted here by JS -->
+        </div>
+
+        <p
+          id="downloadEmpty"
+          class="hidden mt-10 text-center text-zinc-400 max-w-xl mx-auto"
+        >
+          Nenhuma release publicada ainda. Enquanto isso, dá pra rodar do código:
+          <a
+            href="https://github.com/ricardomendes95/network-connection-monitor#instalação-e-execução"
+            class="text-accent-400 hover:underline"
+            target="_blank"
+            rel="noopener"
+          >ver instruções no README</a>.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===== Apoie ===== -->
+    <section id="apoie" class="border-t border-white/5 bg-ink-900/40">
+      <div class="mx-auto max-w-3xl px-6 py-20 text-center">
+        <h2 class="text-3xl sm:text-4xl font-bold">Pagou um café?</h2>
+        <p class="mt-4 text-zinc-300">
+          O app é grátis e open source. Se ele te ajudou a provar que a sua
+          operadora tá te enrolando, considera bancar um café pra galera que
+          faz.
+        </p>
+        <div class="mt-8 flex flex-wrap justify-center gap-3">
+          <a
+            href="https://www.buymeacoffee.com/henrykun55"
+            target="_blank"
+            rel="noopener"
+            class="inline-flex items-center gap-2 px-5 py-3 bg-accent-400 hover:bg-accent-500 text-ink-950 font-semibold rounded-xl transition"
+          >
+            <span>☕</span> Buy me a coffee
+          </a>
+          <a
+            href="https://github.com/sponsors/HenryKun55"
+            target="_blank"
+            rel="noopener"
+            class="inline-flex items-center gap-2 px-5 py-3 bg-ink-800 hover:bg-ink-700 border border-white/10 text-zinc-100 font-semibold rounded-xl transition"
+          >
+            <span>❤️</span> GitHub Sponsors
+          </a>
+        </div>
+        <p class="mt-6 text-xs text-zinc-500">
+          Os links de doação ficam no
+          <code class="bg-ink-800 px-1.5 py-0.5 rounded">.github/FUNDING.yml</code>
+          — atualize lá se quiser apontar pra outro destino.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===== Footer ===== -->
+    <footer class="border-t border-white/5">
+      <div class="mx-auto max-w-6xl px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-zinc-500">
+        <p>
+          Feito com ☕ e raiva da operadora — código em
+          <a
+            href="https://github.com/ricardomendes95/network-connection-monitor"
+            target="_blank"
+            rel="noopener"
+            class="text-zinc-300 hover:text-white"
+          >GitHub</a>.
+        </p>
+        <p>
+          Caiu aí? · Free &amp; open source.
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      // ----- Detect OS -----
+      const ua = navigator.userAgent;
+      let detectedOs = "unknown";
+      if (/Mac|iPhone|iPad/.test(ua)) detectedOs = "mac";
+      else if (/Windows/.test(ua)) detectedOs = "win";
+      else if (/Linux|X11|CrOS/.test(ua)) detectedOs = "linux";
+
+      const OS_META = {
+        mac: { label: "macOS", icon: "🍎", patterns: [/\.dmg$/i, /\.pkg$/i, /-mac\.zip$/i] },
+        win: { label: "Windows", icon: "🪟", patterns: [/\.exe$/i, /\.msi$/i] },
+        linux: { label: "Linux", icon: "🐧", patterns: [/\.AppImage$/i, /\.deb$/i, /\.rpm$/i, /\.tar\.gz$/i] },
+      };
+
+      function classifyAsset(name) {
+        for (const [os, meta] of Object.entries(OS_META)) {
+          if (meta.patterns.some((re) => re.test(name))) return os;
+        }
+        return null;
+      }
+
+      function bytesHuman(n) {
+        if (!Number.isFinite(n) || n <= 0) return "";
+        const u = ["B", "KB", "MB", "GB"];
+        let i = 0;
+        while (n >= 1024 && i < u.length - 1) {
+          n /= 1024;
+          i++;
+        }
+        return n.toFixed(n >= 10 || i === 0 ? 0 : 1) + " " + u[i];
+      }
+
+      // ----- Fetch latest release -----
+      const REPO = "ricardomendes95/network-connection-monitor";
+
+      async function loadRelease() {
+        const grid = document.getElementById("downloadGrid");
+        const empty = document.getElementById("downloadEmpty");
+        const tagEl = document.getElementById("releaseTag");
+        const primary = document.getElementById("primaryDownload");
+        const primaryLabel = document.getElementById("primaryDownloadLabel");
+
+        try {
+          const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
+          if (res.status === 404) throw new Error("no-release");
+          if (!res.ok) throw new Error("api-error:" + res.status);
+          const release = await res.json();
+
+          tagEl.textContent = release.tag_name || "—";
+
+          const buckets = { mac: [], win: [], linux: [] };
+          for (const asset of release.assets || []) {
+            const os = classifyAsset(asset.name);
+            if (os) buckets[os].push(asset);
+          }
+
+          // build cards
+          grid.innerHTML = "";
+          for (const [os, meta] of Object.entries(OS_META)) {
+            const assets = buckets[os];
+            const isCurrent = os === detectedOs;
+            const card = document.createElement("div");
+            card.className =
+              "rounded-xl p-5 border " +
+              (isCurrent
+                ? "bg-accent-400/5 border-accent-400/40"
+                : "bg-ink-800 border-white/5");
+            card.innerHTML = `
+              <div class="flex items-center gap-3 mb-4">
+                <div class="text-2xl">${meta.icon}</div>
+                <h3 class="font-semibold text-lg">${meta.label}${
+                  isCurrent
+                    ? ' <span class="ml-1 text-xs font-mono uppercase bg-accent-400/20 text-accent-400 px-1.5 py-0.5 rounded">você</span>'
+                    : ""
+                }</h3>
+              </div>
+              <ul class="space-y-2">
+                ${
+                  assets.length
+                    ? assets
+                        .map(
+                          (a) =>
+                            `<li><a href="${a.browser_download_url}" class="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-ink-900 hover:bg-ink-700 transition text-sm">
+                              <span class="truncate font-medium">${a.name}</span>
+                              <span class="text-xs text-zinc-500 flex-shrink-0">${bytesHuman(a.size)}</span>
+                            </a></li>`
+                        )
+                        .join("")
+                    : '<li class="text-sm text-zinc-500">— sem build pra essa plataforma —</li>'
+                }
+              </ul>
+            `;
+            grid.appendChild(card);
+          }
+
+          // primary CTA
+          const primaryAssets = buckets[detectedOs] || [];
+          if (primaryAssets.length) {
+            primary.href = primaryAssets[0].browser_download_url;
+            primaryLabel.textContent = `Baixar para ${OS_META[detectedOs].label}`;
+          } else {
+            primary.href = "#downloads";
+            primaryLabel.textContent = "Ver downloads disponíveis";
+          }
+        } catch (err) {
+          tagEl.textContent = "em breve";
+          grid.classList.add("hidden");
+          empty.classList.remove("hidden");
+          primary.href = "https://github.com/ricardomendes95/network-connection-monitor#instalação-e-execução";
+          primaryLabel.textContent = "Ver instruções de instalação";
+        }
+      }
+
+      loadRelease();
+    </script>
+  </body>
+</html>

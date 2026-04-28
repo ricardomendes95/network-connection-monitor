@@ -2,6 +2,9 @@
 
 Aplicativo desktop em Electron + React para monitorar velocidade de internet, armazenar histórico em SQLite e alertar em transições de conectividade (online/offline). Funciona como menu bar app — o teste roda silenciosamente em segundo plano.
 
+🌐 **Site / download:** https://ricardomendes95.github.io/network-connection-monitor/
+📦 **Releases:** https://github.com/ricardomendes95/network-connection-monitor/releases
+
 ## Destaques
 
 - **Múltiplas redes cadastradas** — cadastre Casa, Escritório, Café e o que quiser. O app detecta o SSID/perfil Ethernet ativo e troca a rede selecionada automaticamente. Histórico, gráficos e avaliação ANATEL ficam escopados por rede.
