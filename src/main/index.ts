@@ -147,8 +147,9 @@ app
       )?.value ?? fallback;
 
     const intervalMinutes = Number(getVal("interval_minutes", "15"));
+    const offlineSeconds = Number(getVal("offline_interval_seconds", "30"));
 
-    scheduler = new SchedulerService(intervalMinutes);
+    scheduler = new SchedulerService(intervalMinutes, offlineSeconds);
     registerHandlers(scheduler);
     writeMainLog("IPC handlers registered");
 
