@@ -5,6 +5,8 @@ import { AlertBanner } from '../components/dashboard/AlertBanner'
 import { TestErrorBanner } from '../components/dashboard/TestErrorBanner'
 import { NetworkMismatchBanner } from '../components/dashboard/NetworkMismatchBanner'
 import { UncataloguedNetworkBanner } from '../components/dashboard/UncataloguedNetworkBanner'
+import { RouterRestartBanner } from '../components/dashboard/RouterRestartBanner'
+import { RecoveryToast } from '../components/dashboard/RecoveryToast'
 import { CurrentStatus } from '../components/dashboard/CurrentStatus'
 import { SpeedGauge } from '../components/dashboard/SpeedGauge'
 import { NetworkEvaluation } from '../components/dashboard/NetworkEvaluation'
@@ -43,8 +45,10 @@ export function Dashboard(): JSX.Element {
 
       <NetworkMismatchBanner />
       <UncataloguedNetworkBanner />
+      <RouterRestartBanner />
       <AlertBanner />
       <TestErrorBanner />
+      <RecoveryToast />
 
       <CurrentStatus />
 
