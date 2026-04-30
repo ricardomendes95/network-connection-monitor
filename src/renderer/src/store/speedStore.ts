@@ -1,5 +1,7 @@
 import { create } from 'zustand'
-import type { SpeedResult, Settings, LiveNetworkInfo } from '../types'
+import type { SpeedResult, Settings, LiveNetworkInfo, Network } from '../types'
+import { isBelowAnatel, countConsecutiveBelowAnatel, type AnatelEvalInput } from '../lib/anatel'
+import { useNetworksStore } from './networksStore'
 
 interface SpeedStore {
   results: SpeedResult[]
@@ -11,8 +13,9 @@ interface SpeedStore {
   settings: Settings
   liveNetwork: LiveNetworkInfo | null
 
-  // Sugestão de reiniciar o roteador após 3 testes slow consecutivos.
-  consecutiveSlow: number
+  // Sugestão de reiniciar o roteador após 3 testes seguidos abaixo do
+  // mínimo ANATEL (30% do plano em WiFi, 40% em cabo).
+  consecutiveBelowAnatel: number
   routerHintDismissed: boolean
   recoveryToastVisible: boolean
 
@@ -28,15 +31,15 @@ interface SpeedStore {
   hideRecoveryToast: () => void
 }
 
-const ROUTER_HINT_THRESHOLD = 3
+export const ROUTER_HINT_THRESHOLD = 3
 
-function computeConsecutiveSlow(results: SpeedResult[]): number {
-  let n = 0
-  for (const r of results) {
-    if (r.is_slow === 1) n++
-    else break
+function toEvalInput(result: SpeedResult, active: Network | null): AnatelEvalInput {
+  return {
+    downloadMbps: result.download,
+    contractedMbps: active?.contracted_speed_mbps ?? 0,
+    connectionType: result.connection_type ?? active?.connection_type ?? null,
+    fallbackThresholdMbps: active?.slow_threshold_mbps
   }
-  return n
 }
 
 export const useSpeedStore = create<SpeedStore>((set) => ({
@@ -47,7 +50,7 @@ export const useSpeedStore = create<SpeedStore>((set) => ({
   testError: null,
   nextTestIn: 0,
   liveNetwork: null,
-  consecutiveSlow: 0,
+  consecutiveBelowAnatel: 0,
   routerHintDismissed: false,
   recoveryToastVisible: false,
   settings: {
@@ -60,21 +63,22 @@ export const useSpeedStore = create<SpeedStore>((set) => ({
 
   addResult: (result) =>
     set((state) => {
-      const isSlow = result.is_slow === 1
-      const newStreak = isSlow ? state.consecutiveSlow + 1 : 0
+      const active = useNetworksStore.getState().active
+      const below = isBelowAnatel(toEvalInput(result, active))
+      const newStreak = below ? state.consecutiveBelowAnatel + 1 : 0
       // Dispara o toast positivo quando recuperar de uma streak que tinha
       // atingido o threshold, mesmo se o banner já tinha sido dispensado —
       // a recuperação é uma boa notícia independente.
-      const hadHintStreak = state.consecutiveSlow >= ROUTER_HINT_THRESHOLD
-      const recoveryToastVisible = !isSlow && hadHintStreak ? true : state.recoveryToastVisible
+      const hadHintStreak = state.consecutiveBelowAnatel >= ROUTER_HINT_THRESHOLD
+      const recoveryToastVisible = !below && hadHintStreak ? true : state.recoveryToastVisible
       return {
         results: [result, ...state.results].slice(0, 500),
         lastResult: result,
-        isAlert: isSlow,
-        consecutiveSlow: newStreak,
-        // Reset do dismiss quando a streak reseta — assim a próxima vez que
-        // bater 3 slow consecutivos o banner volta.
-        routerHintDismissed: isSlow ? state.routerHintDismissed : false,
+        isAlert: result.is_slow === 1,
+        consecutiveBelowAnatel: newStreak,
+        // Reset do dismiss quando a streak quebra — próxima vez que bater o
+        // threshold o banner volta.
+        routerHintDismissed: below ? state.routerHintDismissed : false,
         recoveryToastVisible
       }
     }),
@@ -85,12 +89,16 @@ export const useSpeedStore = create<SpeedStore>((set) => ({
   setNextTestIn: (seconds) => set({ nextTestIn: seconds }),
   setSettings: (s) => set({ settings: s }),
   setResults: (results) =>
-    set({
-      results,
-      lastResult: results[0] ?? null,
-      consecutiveSlow: computeConsecutiveSlow(results),
-      routerHintDismissed: false,
-      recoveryToastVisible: false
+    set(() => {
+      const active = useNetworksStore.getState().active
+      const inputs = results.map((r) => toEvalInput(r, active))
+      return {
+        results,
+        lastResult: results[0] ?? null,
+        consecutiveBelowAnatel: countConsecutiveBelowAnatel(inputs),
+        routerHintDismissed: false,
+        recoveryToastVisible: false
+      }
     }),
   setLiveNetwork: (info) => set({ liveNetwork: info }),
   dismissRouterHint: () => set({ routerHintDismissed: true }),

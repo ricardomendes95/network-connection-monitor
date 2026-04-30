@@ -1,19 +1,17 @@
 import { Router, X } from 'lucide-react'
-import { useSpeedStore } from '../../store/speedStore'
-
-const THRESHOLD = 3
+import { useSpeedStore, ROUTER_HINT_THRESHOLD } from '../../store/speedStore'
 
 export function RouterRestartBanner(): JSX.Element | null {
-  const { consecutiveSlow, routerHintDismissed, dismissRouterHint } = useSpeedStore()
+  const { consecutiveBelowAnatel, routerHintDismissed, dismissRouterHint } = useSpeedStore()
 
-  if (consecutiveSlow < THRESHOLD || routerHintDismissed) return null
+  if (consecutiveBelowAnatel < ROUTER_HINT_THRESHOLD || routerHintDismissed) return null
 
   return (
     <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/40 rounded-lg px-4 py-3 mb-4">
       <Router className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
       <div className="flex-1">
         <p className="text-sm font-semibold text-amber-300">
-          Sua conexão tá ruim há {consecutiveSlow} testes seguidos.
+          Sua conexão tá abaixo do mínimo ANATEL há {consecutiveBelowAnatel} testes seguidos.
         </p>
         <p className="text-xs text-muted-foreground mt-0.5">
           Já experimentou reiniciar o roteador? Caso ainda não tenha feito, vale
